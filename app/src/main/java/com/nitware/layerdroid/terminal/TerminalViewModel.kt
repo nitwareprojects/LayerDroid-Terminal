@@ -1,6 +1,7 @@
 package com.nitware.layerdroid.terminal
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -29,6 +30,11 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val _isRunning = MutableLiveData(false)
     val isRunning: LiveData<Boolean> = _isRunning
 
+    private val _launchIntent = MutableLiveData<Intent?>()
+    val launchIntent: LiveData<Intent?> = _launchIntent
+
+    fun consumedLaunchIntent() { _launchIntent.value = null }
+
     private var historyIndex = -1
 
     init {
@@ -45,6 +51,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             TerminalLine("", TerminalLine.Type.OUTPUT),
             TerminalLine("  Digite 'help' para ver os comandos disponíveis.", TerminalLine.Type.INFO),
             TerminalLine("  Digite 'neofetch' para informações do sistema.", TerminalLine.Type.INFO),
+            TerminalLine("  Digite 'nano <arquivo>' para abrir o editor.", TerminalLine.Type.INFO),
             TerminalLine("", TerminalLine.Type.OUTPUT)
         )
         _lines.value = welcome
@@ -82,6 +89,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                             _currentDir.value = it.absolutePath
                         }
                         appendLines(result.lines)
+                        result.launchIntent?.let { _launchIntent.value = it }
                     }
                 }
             } finally {
@@ -134,7 +142,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             "input","ifconfig","ip","ping","netstat","wget","curl","history","alias","unalias",
             "env","export","unset","which","man","banner","matrix","fortune","cowsay","sl","rev",
             "sort","uniq","awk","sed","tr","cut","tar","chmod","chown","du","kill","base64",
-            "md5sum","sha256sum","exit","quit")
+            "md5sum","sha256sum","exit","quit",
+            "nano","vi","vim","edit","view","less","more")
         return builtins.filter { it.startsWith(partial) }
     }
 

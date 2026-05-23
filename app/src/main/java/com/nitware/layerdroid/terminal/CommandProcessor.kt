@@ -1,6 +1,7 @@
 package com.nitware.layerdroid.terminal
 
 import android.content.Context
+import android.content.Intent
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
@@ -32,7 +33,8 @@ class CommandProcessor(private val context: Context) {
         val lines: List<TerminalLine>,
         val newDir: File? = null,
         val shouldClear: Boolean = false,
-        val shouldExit: Boolean = false
+        val shouldExit: Boolean = false,
+        val launchIntent: Intent? = null
     )
 
     suspend fun process(rawInput: String): Result {
@@ -135,6 +137,8 @@ class CommandProcessor(private val context: Context) {
             "kill" -> shell.executeLines("kill ${args.joinToString(" ")}", currentDir).let { Result(it) }
             "pkill" -> shell.executeLines("pkill ${args.joinToString(" ")}", currentDir).let { Result(it) }
             "su" -> Result(listOf(TerminalLine("su: Permission denied (app não tem root)", TerminalLine.Type.ERROR)))
+            "nano", "vi", "vim", "edit" -> cmdNano(args, readOnly = false)
+            "view", "less", "more" -> cmdNano(args, readOnly = true)
             else -> {
                 val result = shell.executeLines(expanded, currentDir)
                 if (result.isEmpty()) {
@@ -1111,7 +1115,11 @@ class CommandProcessor(private val context: Context) {
             "history" to "history [-c] [n]\n  Show command history.\n  -c  clear history",
             "uname" to "uname [-a|-r|-m|-s|-n]\n  Print system information.",
             "alias" to "alias [name=value]\n  Create command aliases.",
-            "export" to "export KEY=value\n  Set environment variables."
+            "export" to "export KEY=value\n  Set environment variables.",
+            "nano" to "nano <arquivo>\n  Abre o editor de texto.\n  ^O salvar, ^X sair, ^W buscar, ^_ ir para linha.",
+            "vi"   to "vi <arquivo>\n  Alias para nano.",
+            "edit" to "edit <arquivo>\n  Alias para nano.",
+            "view" to "view <arquivo>\n  Abre arquivo em modo somente leitura."
         )
         val page = manPages[cmd] ?: return Result(listOf(TerminalLine("No manual entry for $cmd", TerminalLine.Type.ERROR)))
         val lines = mutableListOf(
@@ -1137,6 +1145,10 @@ class CommandProcessor(private val context: Context) {
         lines.add(TerminalLine("  cat    mkdir    rm [-rf]    touch", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  cp    mv    find    tree    stat    file", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  grep [-inv]    head    tail    wc    du", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("EDITOR", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("  nano <arquivo>    vi    vim    edit", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  view <arquivo>  (somente leitura)", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("SISTEMA", TerminalLine.Type.INFO))
         lines.add(TerminalLine("  uname    whoami    id    hostname    date", TerminalLine.Type.OUTPUT))
@@ -1294,6 +1306,27 @@ class CommandProcessor(private val context: Context) {
         } else {
             Result(listOf(TerminalLine("Usage: rev <text>", TerminalLine.Type.WARNING)))
         }
+    }
+
+    // ─── Editor ────────────────────────────────────────────────────────────────
+
+    private fun cmdNano(args: List<String>, readOnly: Boolean): Result {
+        val filename = args.firstOrNull { !it.startsWith("-") }
+            ?: return Result(listOf(
+                TerminalLine("Usage: nano <arquivo>", TerminalLine.Type.WARNING),
+                TerminalLine("       vi <arquivo>", TerminalLine.Type.WARNING),
+                TerminalLine("       view <arquivo>  (somente leitura)", TerminalLine.Type.WARNING)
+            ))
+        val file = resolveFile(filename)
+        if (file.isDirectory) {
+            return Result(listOf(TerminalLine("nano: ${filename}: é um diretório", TerminalLine.Type.ERROR)))
+        }
+        val intent = NanoActivity.newIntent(context, file.absolutePath, readOnly)
+        val msg = if (file.exists()) "Abrindo ${file.name}..." else "Criando ${file.name}..."
+        return Result(
+            lines = listOf(TerminalLine(msg, TerminalLine.Type.INFO)),
+            launchIntent = intent
+        )
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

@@ -288,6 +288,13 @@ class MainActivity : AppCompatActivity() {
         viewModel.shouldExit.observe(this) { exit ->
             if (exit) finish()
         }
+
+        viewModel.launchIntent.observe(this) { intent ->
+            if (intent != null) {
+                startActivity(intent)
+                viewModel.consumedLaunchIntent()
+            }
+        }
     }
 
     private fun copySelection() {
