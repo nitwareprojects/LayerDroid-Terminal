@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.LayerDroidTerminal" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/terminal_green</item>
+        <item name="colorPrimaryDark">@color/terminal_bar</item>
+        <item name="colorAccent">@color/terminal_green</item>
+        <item name="android:windowBackground">@color/terminal_bg</item>
+        <item name="android:statusBarColor">@color/statusBar</item>
+        <item name="android:navigationBarColor">@color/terminal_bar</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+    </style>
+</resources>

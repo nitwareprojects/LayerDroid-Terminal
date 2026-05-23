@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Terminal backgrounds -->
+    <color name="terminal_bg">#0D1117</color>
+    <color name="terminal_bar">#161B22</color>
+    <color name="terminal_input_bg">#0D1117</color>
+    <color name="terminal_divider">#21262D</color>
+
+    <!-- Terminal text colors -->
+    <color name="terminal_text">#E6EDF3</color>
+    <color name="terminal_output">#C9D1D9</color>
+    <color name="terminal_system">#8B949E</color>
+    <color name="terminal_hint">#484F58</color>
+    <color name="terminal_gray">#8B949E</color>
+
+    <!-- Accent colors -->
+    <color name="terminal_green">#56D364</color>
+    <color name="terminal_green_dim">#2EA043</color>
+    <color name="terminal_green_dark">#238636</color>
+    <color name="terminal_blue">#58A6FF</color>
+    <color name="terminal_red">#FF7B72</color>
+    <color name="terminal_yellow">#E3B341</color>
+    <color name="terminal_cyan">#79C0FF</color>
+    <color name="terminal_purple">#D2A8FF</color>
+
+    <!-- Icon -->
+    <color name="icon_bg">#0A0E0A</color>
+    <color name="icon_green">#00FF7F</color>
+    <color name="icon_layer1">#0F1F0F</color>
+    <color name="icon_layer2">#0D1A0D</color>
+    <color name="icon_layer3">#0A1410</color>
+
+    <!-- Status/nav bar -->
+    <color name="statusBar">#0D1117</color>
+</resources>
