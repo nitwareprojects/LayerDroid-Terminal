@@ -1,9 +1,6 @@
 package com.nitware.layerdroid.terminal
 
 import android.content.Context
-import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
@@ -178,7 +175,6 @@ class CommandProcessor(private val context: Context) {
         val paths = args.filter { !it.startsWith("-") }
         val showAll = 'a' in flags || 'A' in flags
         val longFormat = 'l' in flags
-        val humanReadable = 'h' in flags || longFormat
 
         val targetDir = if (paths.isEmpty()) currentDir else {
             val p = paths[0]
@@ -846,7 +842,7 @@ class CommandProcessor(private val context: Context) {
         }
     }
 
-    private fun cmdPm(args: List<String>): Result {
+    private suspend fun cmdPm(args: List<String>): Result {
         val subCmd = args.firstOrNull() ?: return Result(listOf(
             TerminalLine("Usage: pm <list|install|uninstall|clear> [options]", TerminalLine.Type.WARNING)
         ))
@@ -1115,8 +1111,7 @@ class CommandProcessor(private val context: Context) {
             "history" to "history [-c] [n]\n  Show command history.\n  -c  clear history",
             "uname" to "uname [-a|-r|-m|-s|-n]\n  Print system information.",
             "alias" to "alias [name=value]\n  Create command aliases.",
-            "export" to "export KEY=value\n  Set environment variables.",
-            "neofetch" to "neofetch\n  Show system info with ASCII art logo."
+            "export" to "export KEY=value\n  Set environment variables."
         )
         val page = manPages[cmd] ?: return Result(listOf(TerminalLine("No manual entry for $cmd", TerminalLine.Type.ERROR)))
         val lines = mutableListOf(

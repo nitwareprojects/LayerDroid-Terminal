@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class TerminalViewModel(application: Application) : AndroidViewModel(application) {
@@ -65,7 +67,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         _isRunning.value = true
         viewModelScope.launch {
             try {
-                val result = processor.process(trimmed)
+                val result = withContext(Dispatchers.IO) { processor.process(trimmed) }
                 when {
                     result.shouldClear -> {
                         _lines.value = emptyList()
