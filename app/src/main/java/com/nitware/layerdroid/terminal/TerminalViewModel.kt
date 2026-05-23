@@ -143,7 +143,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             "env","export","unset","which","man","banner","matrix","fortune","cowsay","sl","rev",
             "sort","uniq","awk","sed","tr","cut","tar","chmod","chown","du","kill","base64",
             "md5sum","sha256sum","exit","quit",
-            "nano","vi","vim","edit","view","less","more")
+            "nano","vi","vim","edit","view","less","more",
+            "pkg",
+            "weather","wttr","myip","ipinfo","gh","gh-repo","tldr","define","joke","catfact","fact","coin","qr",
+            "battery","clip","copy","paste","vibrate","notify","share","torch","tts","volume","wifi","device")
         return builtins.filter { it.startsWith(partial) }
     }
 

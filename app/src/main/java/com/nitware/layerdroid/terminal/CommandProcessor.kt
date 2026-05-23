@@ -2,6 +2,7 @@ package com.nitware.layerdroid.terminal
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
@@ -19,6 +20,7 @@ class CommandProcessor(private val context: Context) {
         if (it.canRead()) it else context.filesDir
     }
     private val shell = ShellExecutor()
+    private val pkg = PkgManager(context)
     private val aliases = mutableMapOf<String, String>()
     private val envVars = mutableMapOf<String, String>(
         "HOME" to currentDir.absolutePath,
@@ -139,14 +141,86 @@ class CommandProcessor(private val context: Context) {
             "su" -> Result(listOf(TerminalLine("su: Permission denied (app não tem root)", TerminalLine.Type.ERROR)))
             "nano", "vi", "vim", "edit" -> cmdNano(args, readOnly = false)
             "view", "less", "more" -> cmdNano(args, readOnly = true)
+
+            // ─── Package manager ─────
+            "pkg" -> cmdPkg(args)
+
+            // ─── Internet commands ─────
+            "weather", "clima" -> Result(NetCommands.weather(args))
+            "weather-full", "wttr" -> Result(NetCommands.weatherAscii(args))
+            "myip", "publicip" -> Result(NetCommands.myIp())
+            "ipinfo", "geoip" -> Result(NetCommands.ipInfo(args))
+            "gh", "github" -> Result(NetCommands.github(args))
+            "gh-repo", "ghrepo" -> Result(NetCommands.githubRepo(args))
+            "tldr", "cheat" -> Result(NetCommands.tldr(args))
+            "define", "dict" -> Result(NetCommands.define(args))
+            "joke", "piada" -> Result(NetCommands.joke())
+            "catfact" -> Result(NetCommands.catFact())
+            "fact", "uselessfact" -> Result(NetCommands.uselessFact())
+            "coin", "btc", "bitcoin" -> Result(NetCommands.coin())
+            "qr", "qrcode" -> {
+                val (lines, url) = NetCommands.qrCode(args)
+                val intent = url?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) } }
+                Result(lines, launchIntent = intent)
+            }
+
+            // ─── Device commands ─────
+            "battery", "bat" -> Result(DeviceCommands.battery(context))
+            "clip", "paste", "clipget" -> Result(DeviceCommands.clipboardGet(context))
+            "copy", "clipset" -> Result(DeviceCommands.clipboardSet(context, args))
+            "vibrate", "buzz" -> Result(DeviceCommands.vibrate(context, args))
+            "notify", "notification" -> Result(DeviceCommands.notify(context, args))
+            "share" -> {
+                val (lines, intent) = DeviceCommands.share(context, args)
+                Result(lines, launchIntent = intent)
+            }
+            "torch", "flashlight", "lanterna" -> Result(DeviceCommands.torch(context, args))
+            "tts", "say", "speak" -> Result(DeviceCommands.ttsSpeak(context, args))
+            "volume", "vol" -> Result(DeviceCommands.volumeInfo(context))
+            "wifi" -> Result(DeviceCommands.wifiInfo(context))
+            "device", "deviceinfo" -> Result(DeviceCommands.deviceInfo(context))
             else -> {
-                val result = shell.executeLines(expanded, currentDir)
-                if (result.isEmpty()) {
-                    Result(listOf(TerminalLine("$cmd: comando não encontrado. Digite 'help' para ver a lista.", TerminalLine.Type.ERROR)))
+                // Tenta executar como script instalado via pkg
+                if (pkg.isInstalled(cmd)) {
+                    Result(pkg.cmdRun(cmd, args, currentDir))
                 } else {
-                    Result(result)
+                    val result = shell.executeLines(expanded, currentDir)
+                    if (result.isEmpty()) {
+                        Result(listOf(TerminalLine("$cmd: comando não encontrado. Digite 'help' para ver a lista.", TerminalLine.Type.ERROR)))
+                    } else {
+                        Result(result)
+                    }
                 }
             }
+        }
+    }
+
+    // ─── Package Manager ───────────────────────────────────────────────────────
+
+    private suspend fun cmdPkg(args: List<String>): Result {
+        val sub = args.firstOrNull()?.lowercase()
+            ?: return Result(pkg.help())
+        val rest = args.drop(1)
+        return when (sub) {
+            "update", "up", "refresh"     -> Result(pkg.cmdUpdate())
+            "list", "ls", "installed"     -> Result(pkg.cmdList())
+            "available", "avail", "all"   -> Result(pkg.cmdAvailable())
+            "search", "find"              -> Result(pkg.cmdSearch(rest.joinToString(" ")))
+            "info", "show"                -> Result(rest.firstOrNull()?.let { pkg.cmdInfo(it) }
+                                              ?: listOf(TerminalLine("Usage: pkg info <nome>", TerminalLine.Type.WARNING)))
+            "install", "add", "i"         -> Result(rest.firstOrNull()?.let { pkg.cmdInstall(it) }
+                                              ?: listOf(TerminalLine("Usage: pkg install <nome>", TerminalLine.Type.WARNING)))
+            "remove", "uninstall", "rm"   -> Result(rest.firstOrNull()?.let { pkg.cmdRemove(it) }
+                                              ?: listOf(TerminalLine("Usage: pkg remove <nome>", TerminalLine.Type.WARNING)))
+            "run", "exec"                 -> Result(rest.firstOrNull()?.let { pkg.cmdRun(it, rest.drop(1), currentDir) }
+                                              ?: listOf(TerminalLine("Usage: pkg run <nome> [args...]", TerminalLine.Type.WARNING)))
+            "repo"                        -> Result(pkg.cmdRepo())
+            "setrepo"                     -> Result(pkg.cmdSetRepo(rest.joinToString(" ")))
+            "help", "-h", "--help", "?"   -> Result(pkg.help())
+            else                          -> Result(listOf(
+                TerminalLine("pkg: sub-comando desconhecido '$sub'", TerminalLine.Type.ERROR),
+                TerminalLine("Use 'pkg help' para ver os comandos disponíveis.", TerminalLine.Type.SYSTEM)
+            ))
         }
     }
 
@@ -1149,6 +1223,20 @@ class CommandProcessor(private val context: Context) {
         lines.add(TerminalLine("EDITOR", TerminalLine.Type.INFO))
         lines.add(TerminalLine("  nano <arquivo>    vi    vim    edit", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  view <arquivo>  (somente leitura)", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("PACOTES / SCRIPTS  (pkg help para detalhes)", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("  pkg update    pkg list    pkg available", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  pkg install <nome>    pkg run <nome>    pkg remove <nome>", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("INTERNET", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("  weather [cidade]    myip    ipinfo [ip]", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  gh <user>    gh-repo <owner/repo>    tldr <cmd>", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  define <palavra>    joke    catfact    coin    qr <texto>", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("DISPOSITIVO", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("  battery    device    wifi    volume", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  clip   copy <txt>   vibrate [ms]   notify <título> <msg>", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  share <txt>    torch on|off    tts <texto>", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("SISTEMA", TerminalLine.Type.INFO))
         lines.add(TerminalLine("  uname    whoami    id    hostname    date", TerminalLine.Type.OUTPUT))
