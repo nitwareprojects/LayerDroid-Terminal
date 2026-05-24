@@ -25,29 +25,33 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: TerminalViewModel by viewModels()
     private lateinit var adapter: TerminalAdapter
     private var ctrlActive = false
-    private var altActive = false
 
     companion object {
+        // label → action  (| separates visual groups)
         private val SPECIAL_KEYS = listOf(
-            "ESC" to "ESC",
-            "TAB" to "TAB",
-            "CTRL" to "CTRL",
-            "ALT" to "ALT",
-            "/" to "/",
-            "-" to "-",
-            "|" to "|",
-            "&" to "&",
-            ">" to ">",
-            "<" to "<",
-            "~" to "~",
-            "'" to "'",
-            "\"" to "\"",
-            "HOME" to "HOME",
-            "END" to "END",
-            "↑" to "UP",
-            "↓" to "DOWN",
-            "←" to "LEFT",
-            "→" to "RIGHT"
+            "CTRL"  to "CTRL",
+            "ESC"   to "ESC",
+            "TAB"   to "TAB",
+            "↑"     to "UP",
+            "↓"     to "DOWN",
+            "←"     to "LEFT",
+            "→"     to "RIGHT",
+            "HOME"  to "HOME",
+            "END"   to "END",
+            "/"     to "/",
+            "-"     to "-",
+            "|"     to "|",
+            "&"     to "&",
+            ">"     to ">",
+            "<"     to "<",
+            "~"     to "~",
+            "."     to ".",
+            ":"     to ":",
+            ";"     to ";",
+            "*"     to "*",
+            "!"     to "!",
+            "'"     to "'",
+            "\""    to "\""
         )
     }
 
@@ -126,28 +130,29 @@ class MainActivity : AppCompatActivity() {
         val container = binding.specialKeysContainer
 
         SPECIAL_KEYS.forEach { (label, action) ->
+            val isModifier = action in listOf("CTRL", "ESC", "TAB")
             val btn = Button(this).apply {
                 text = label
-                textSize = 12f
-                setTextColor(Color.parseColor("#C9D1D9"))
+                textSize = if (isModifier) 11f else 13f
+                setTextColor(if (isModifier) Color.parseColor("#79C0FF") else Color.parseColor("#E6EDF3"))
                 isAllCaps = false
                 stateListAnimator = null
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dpToPx(5).toFloat()
-                    setColor(Color.parseColor("#21262D"))
-                    setStroke(1, Color.parseColor("#30363D"))
+                    cornerRadius = dpToPx(6).toFloat()
+                    setColor(if (isModifier) Color.parseColor("#161B22") else Color.parseColor("#21262D"))
+                    setStroke(1, if (isModifier) Color.parseColor("#388BFD") else Color.parseColor("#30363D"))
                 }
-                val vPad = dpToPx(6)
-                val hPad = dpToPx(10)
+                val vPad = dpToPx(4)
+                val hPad = dpToPx(if (isModifier) 9 else 8)
                 setPadding(hPad, vPad, hPad, vPad)
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                    LinearLayout.LayoutParams.MATCH_PARENT
                 ).apply {
-                    marginEnd = dpToPx(5)
-                    topMargin = dpToPx(3)
-                    bottomMargin = dpToPx(3)
+                    marginEnd = dpToPx(4)
+                    topMargin = dpToPx(4)
+                    bottomMargin = dpToPx(4)
                 }
                 layoutParams = params
                 setOnClickListener { handleSpecialKey(action) }
@@ -161,20 +166,13 @@ class MainActivity : AppCompatActivity() {
             "ESC" -> {
                 binding.etInput.text?.clear()
                 ctrlActive = false
-                altActive = false
                 updateModifierState()
             }
             "TAB" -> handleTab()
             "CTRL" -> {
                 ctrlActive = !ctrlActive
-                altActive = false
                 updateModifierState()
-                if (ctrlActive) Toast.makeText(this, "CTRL active - press C, D, L, A or E", Toast.LENGTH_SHORT).show()
-            }
-            "ALT" -> {
-                altActive = !altActive
-                ctrlActive = false
-                updateModifierState()
+                if (ctrlActive) Toast.makeText(this, "CTRL — press C, D, L, A or E", Toast.LENGTH_SHORT).show()
             }
             "UP" -> {
                 val prev = viewModel.getPreviousCommand()
@@ -251,18 +249,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateModifierState() {
         val ctrlIdx = SPECIAL_KEYS.indexOfFirst { it.first == "CTRL" }
-        val altIdx  = SPECIAL_KEYS.indexOfFirst { it.first == "ALT" }
         fun setActive(idx: Int, active: Boolean) {
+            if (idx < 0) return
             (binding.specialKeysContainer.getChildAt(idx) as? Button)?.background =
                 GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dpToPx(5).toFloat()
-                    setColor(if (active) Color.parseColor("#1F6FEB") else Color.parseColor("#21262D"))
-                    setStroke(1, if (active) Color.parseColor("#58A6FF") else Color.parseColor("#30363D"))
+                    cornerRadius = dpToPx(6).toFloat()
+                    setColor(if (active) Color.parseColor("#1F6FEB") else Color.parseColor("#161B22"))
+                    setStroke(1, if (active) Color.parseColor("#58A6FF") else Color.parseColor("#388BFD"))
                 }
         }
         setActive(ctrlIdx, ctrlActive)
-        setActive(altIdx, altActive)
     }
 
     private fun setupInput() {

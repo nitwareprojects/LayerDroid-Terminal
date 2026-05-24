@@ -63,11 +63,12 @@
     <HorizontalScrollView
         android:id="@+id/specialKeysScroll"
         android:layout_width="0dp"
-        android:layout_height="44dp"
-        android:background="@color/terminal_bar"
+        android:layout_height="48dp"
+        android:background="#161B22"
         android:scrollbars="none"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:elevation="2dp"
         app:layout_constraintBottom_toTopOf="@id/divider2"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -78,8 +79,8 @@
             android:layout_height="match_parent"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp" />
     </HorizontalScrollView>
 
     <View
@@ -139,12 +140,14 @@
             android:id="@+id/btnSend"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="↵"
-            android:textSize="18sp"
+            android:text="▶ RUN"
+            android:textSize="13sp"
+            android:textStyle="bold"
             android:textColor="@android:color/white"
             android:backgroundTint="@color/terminal_green_dark"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:letterSpacing="0.05"
             style="@style/Widget.AppCompat.Button.Colored" />
     </LinearLayout>
 
