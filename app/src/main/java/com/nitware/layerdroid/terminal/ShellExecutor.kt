@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
+import java.util.concurrent.Executors
 
 class ShellExecutor {
 
@@ -23,15 +24,20 @@ class ShellExecutor {
             try {
                 val pb = ProcessBuilder("/system/bin/sh", "-c", command)
                     .directory(workingDir)
-                    .redirectErrorStream(false)
+                    .redirectErrorStream(true) // merge stderr into stdout — avoids deadlock
                 if (envVars.isNotEmpty()) {
                     pb.environment().putAll(envVars)
                 }
                 val process = pb.start()
-                val stdout = process.inputStream.bufferedReader().readText()
-                val stderr = process.errorStream.bufferedReader().readText()
+
+                // Read output in a dedicated thread so we never block the process
+                val outputFuture = Executors.newSingleThreadExecutor().submit<String> {
+                    process.inputStream.bufferedReader().readText()
+                }
                 process.waitFor()
-                Result(stdout.trimEnd('\n'), stderr.trimEnd('\n'), process.exitValue())
+                val output = outputFuture.get()
+
+                Result(output.trimEnd('\n'), "", process.exitValue())
             } catch (e: Exception) {
                 Result("", e.message ?: "Execution failed", -1)
             }
