@@ -1443,7 +1443,7 @@ class CommandProcessor(private val context: Context) {
         private fun unary(): Double { if (p < e.length && e[p] == '-') { p++; return -primary() }; if (p < e.length && e[p] == '+') p++; return primary() }
         private fun primary(): Double {
             if (p < e.length && e[p] == '(') { p++; val r = expr(); if (p < e.length && e[p] == ')') p++; return r }
-            val wordEnd = e.indexOfFirst { idx -> idx >= p && !e[idx].isLetter() }.takeIf { it > p } ?: run { var i = p; while (i < e.length && e[i].isLetter()) i++; i }
+            val wordEnd = run { var i = p; while (i < e.length && e[i].isLetter()) i++; i }
             if (wordEnd > p) {
                 val name = e.substring(p, wordEnd); p = wordEnd
                 if (p < e.length && e[p] == '(') {
