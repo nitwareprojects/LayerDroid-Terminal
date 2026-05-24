@@ -49,6 +49,13 @@
             android:configChanges="keyboardHidden|orientation|screenSize" />
 
         <activity
+            android:name=".EditPackageActivity"
+            android:exported="false"
+            android:label="Package Editor"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="keyboardHidden|orientation|screenSize" />
+
+        <activity
             android:name=".NanoActivity"
             android:exported="false"
             android:label="nano"

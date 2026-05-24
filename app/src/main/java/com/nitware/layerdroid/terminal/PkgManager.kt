@@ -261,6 +261,43 @@ class PkgManager(private val context: Context) {
         TerminalLine("Tip: installed scripts can be called directly by name.", TerminalLine.Type.SYSTEM)
     )
 
+    // ─── Package authoring ─────────────────────────────────────────────────────
+
+    fun getScriptMeta(name: String): JSONObject? = findInManifest(name)
+
+    fun upsertPackage(name: String, description: String, version: String, author: String, content: String) {
+        val file = scriptFile(name)
+        file.parentFile?.mkdirs()
+        file.writeText(content)
+        file.setExecutable(true)
+
+        val manifest = loadManifest()
+        val scripts = manifest.optJSONArray("scripts") ?: org.json.JSONArray()
+        var found = false
+        for (i in 0 until scripts.length()) {
+            val s = scripts.getJSONObject(i)
+            if (s.optString("name") == name) {
+                s.put("description", description)
+                s.put("version", version)
+                s.put("author", author)
+                s.put("inline", content)
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            scripts.put(JSONObject().apply {
+                put("name", name)
+                put("description", description)
+                put("version", version)
+                put("author", author)
+                put("inline", content)
+            })
+        }
+        manifest.put("scripts", scripts)
+        manifestCacheFile.writeText(manifest.toString(2))
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
     private fun loadManifest(): JSONObject {

@@ -9,16 +9,23 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 
+data class ScriptItem(
+    val file: File,
+    val description: String,
+    val version: String
+)
+
 class ScriptsAdapter(
     private val context: Context,
-    private var scripts: List<File>,
-    private val onEdit: (File) -> Unit,
-    private val onDelete: (File) -> Unit
+    private var items: List<ScriptItem>,
+    private val onEdit: (ScriptItem) -> Unit,
+    private val onDelete: (ScriptItem) -> Unit
 ) : RecyclerView.Adapter<ScriptsAdapter.VH>() {
 
     inner class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView = view.findViewById(R.id.tvName)
-        val tvSize: TextView = view.findViewById(R.id.tvSize)
+        val tvVersion: TextView = view.findViewById(R.id.tvVersion)
+        val tvDescription: TextView = view.findViewById(R.id.tvDescription)
         val btnEdit: Button = view.findViewById(R.id.btnEdit)
         val btnDelete: Button = view.findViewById(R.id.btnDelete)
     }
@@ -29,22 +36,18 @@ class ScriptsAdapter(
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        val file = scripts[position]
-        holder.tvName.text = file.nameWithoutExtension
-        holder.tvSize.text = formatSize(file.length())
-        holder.btnEdit.setOnClickListener { onEdit(file) }
-        holder.btnDelete.setOnClickListener { onDelete(file) }
+        val item = items[position]
+        holder.tvName.text = item.file.nameWithoutExtension
+        holder.tvVersion.text = if (item.version.isNotEmpty()) "v${item.version}" else ""
+        holder.tvDescription.text = item.description.ifEmpty { "(no description)" }
+        holder.btnEdit.setOnClickListener { onEdit(item) }
+        holder.btnDelete.setOnClickListener { onDelete(item) }
     }
 
-    override fun getItemCount() = scripts.size
+    override fun getItemCount() = items.size
 
-    fun update(newList: List<File>) {
-        scripts = newList
+    fun update(newItems: List<ScriptItem>) {
+        items = newItems
         notifyDataSetChanged()
-    }
-
-    private fun formatSize(bytes: Long): String = when {
-        bytes < 1024 -> "$bytes B"
-        else -> "${bytes / 1024} KB"
     }
 }

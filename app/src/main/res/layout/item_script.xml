@@ -26,13 +26,22 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tvSize"
+            android:id="@+id/tvVersion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#8B949E"
             android:textSize="12sp"
             android:fontFamily="monospace" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#8B949E"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:layout_marginTop="2dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
