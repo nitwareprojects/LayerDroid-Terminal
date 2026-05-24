@@ -1039,8 +1039,16 @@ class CommandProcessor(private val context: Context) {
     }
 
     private suspend fun cmdDumpsys(args: List<String>): Result {
+        if (args.firstOrNull() in listOf("list", "-l", "--list")) {
+            return shell.executeLines("dumpsys -l 2>&1", currentDir, 6000L).let { Result(it) }
+        }
         val service = args.firstOrNull() ?: "battery"
-        return shell.executeLines("dumpsys $service 2>&1 | head -80", currentDir, 8000L).let { Result(it) }
+        val lines = shell.executeLines("dumpsys $service 2>&1", currentDir, 10000L)
+        if (lines.isEmpty()) return Result(listOf(
+            TerminalLine("dumpsys $service: no output", TerminalLine.Type.WARNING),
+            TerminalLine("  Use 'dumpsys list' to see available services", TerminalLine.Type.SYSTEM)
+        ))
+        return Result(lines.take(120))
     }
 
     private suspend fun cmdSettings(args: List<String>): Result {
@@ -1504,12 +1512,19 @@ class CommandProcessor(private val context: Context) {
             }
         }
         val name = names.first()
-        return Result(listOf(
-            TerminalLine("$name: not found on this system", TerminalLine.Type.ERROR),
-            TerminalLine("  If Termux is installed: pkg install $name", TerminalLine.Type.INFO),
-            if (hasTermux) TerminalLine("  Termux detected — run: pkg install $name in Termux", TerminalLine.Type.WARNING)
-            else TerminalLine("  Install Termux to use real Linux packages", TerminalLine.Type.WARNING)
-        ))
+        val lines = mutableListOf(TerminalLine("$name: not found", TerminalLine.Type.ERROR))
+        when {
+            hasTermux -> lines.add(TerminalLine("  Termux active — run in Termux: pkg install $name", TerminalLine.Type.WARNING))
+            isTermuxInstalled() -> {
+                lines.add(TerminalLine("  Termux is installed but sandboxed (Android security).", TerminalLine.Type.WARNING))
+                lines.add(TerminalLine("  Open Termux directly to use $name.", TerminalLine.Type.SYSTEM))
+            }
+            else -> {
+                lines.add(TerminalLine("  Install Termux to get $name and 1000+ packages.", TerminalLine.Type.INFO))
+                lines.add(TerminalLine("  Get it at: f-droid.org or play.google.com", TerminalLine.Type.SYSTEM))
+            }
+        }
+        return Result(lines)
     }
 
     private suspend fun cmdSsh(args: List<String>): Result {

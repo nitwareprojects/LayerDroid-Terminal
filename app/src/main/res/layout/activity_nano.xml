@@ -50,7 +50,7 @@
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
                 android:scrollHorizontally="true"
-                android:hint="Comece a digitar..."
+                android:hint="Start typing..."
                 android:textColorHint="@color/terminal_hint" />
         </HorizontalScrollView>
     </ScrollView>

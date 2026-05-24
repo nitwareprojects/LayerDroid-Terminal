@@ -1,56 +1,70 @@
 {
   "repo": "LayerDroid Core",
-  "version": 1,
-  "updated_at": "2026-05-23",
+  "version": 2,
+  "updated_at": "2026-05-24",
   "scripts": [
     {
       "name": "hello",
-      "description": "Hello world in 3 languages",
-      "version": "1.0",
+      "description": "Hello world test script",
+      "version": "1.1",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\necho \"Olá, $(whoami)! 👋\"\necho \"Hello, $(whoami)!\"\necho \"Hola, $(whoami)!\"\necho\necho \"Diretório: $(pwd)\"\necho \"Data:      $(date)\"\n"
+      "inline": "#!/system/bin/sh\necho \"+---------------------------+\"\necho \"|  Hello from LayerDroid!   |\"\necho \"+---------------------------+\"\necho\necho \"User:    $(whoami 2>/dev/null || echo user)\"\necho \"Dir:     $(pwd)\"\necho \"Date:    $(date)\"\necho \"Device:  $(getprop ro.product.model 2>/dev/null)\"\n"
     },
     {
       "name": "sysinfo",
-      "description": "Complete system snapshot",
-      "version": "1.0",
+      "description": "Full system snapshot (kernel, CPU, memory, storage)",
+      "version": "1.1",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\necho \"╔════════════════════════════════════╗\"\necho \"║       LayerDroid SysInfo           ║\"\necho \"╚════════════════════════════════════╝\"\necho\necho \"▸ KERNEL\"\nuname -a\necho\necho \"▸ CPU (primeiros 8 campos)\"\nhead -8 /proc/cpuinfo 2>/dev/null\necho\necho \"▸ MEMÓRIA\"\nhead -3 /proc/meminfo 2>/dev/null\necho\necho \"▸ UPTIME\"\ncat /proc/uptime 2>/dev/null\necho\necho \"▸ DISPOSITIVO\"\ngetprop ro.product.model 2>/dev/null\ngetprop ro.product.brand 2>/dev/null\ngetprop ro.build.version.release 2>/dev/null\n"
+      "inline": "#!/system/bin/sh\necho \"+------------------------------------+\"\necho \"|       LayerDroid SysInfo           |\"\necho \"+------------------------------------+\"\necho\necho \"-- KERNEL\"\nuname -a 2>/dev/null\necho\necho \"-- CPU\"\ngrep 'Hardware\\|Processor\\|model name' /proc/cpuinfo 2>/dev/null | head -4\necho \"Cores: $(nproc 2>/dev/null || grep -c processor /proc/cpuinfo 2>/dev/null)\"\necho\necho \"-- MEMORY\"\ngrep 'MemTotal\\|MemFree\\|MemAvailable' /proc/meminfo 2>/dev/null\necho\necho \"-- STORAGE\"\ndf -h /sdcard 2>/dev/null | tail -1\necho\necho \"-- DEVICE\"\necho \"Model:   $(getprop ro.product.model 2>/dev/null)\"\necho \"Brand:   $(getprop ro.product.brand 2>/dev/null)\"\necho \"Android: $(getprop ro.build.version.release 2>/dev/null)\"\necho \"SDK:     $(getprop ro.build.version.sdk 2>/dev/null)\"\n"
     },
     {
       "name": "randpass",
-      "description": "Generate a strong random password (use: randpass [length])",
-      "version": "1.0",
+      "description": "Generate a strong random password (usage: randpass [length])",
+      "version": "1.1",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\nLEN=${1:-16}\ncat /dev/urandom | tr -dc 'a-zA-Z0-9!@#%^&*-_=+' 2>/dev/null | head -c $LEN\necho\n"
+      "inline": "#!/system/bin/sh\nLEN=${1:-20}\nPASS=$(cat /dev/urandom 2>/dev/null | tr -dc 'a-zA-Z0-9!@#$%^&*-_=+' | head -c $LEN)\necho\necho \"Password ($LEN chars):\"\necho \"  $PASS\"\necho\n"
     },
     {
       "name": "ipcheck",
-      "description": "Show public IP + geolocation info",
-      "version": "1.0",
+      "description": "Show public IP and geolocation info",
+      "version": "1.2",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\necho \"IP público:\"\nwget -qO- https://api.ipify.org 2>/dev/null || curl -s https://api.ipify.org 2>/dev/null\necho\necho \"Info detalhada:\"\nwget -qO- http://ip-api.com/line/?fields=country,regionName,city,isp,org 2>/dev/null || curl -s http://ip-api.com/line/?fields=country,regionName,city,isp,org\n"
+      "inline": "#!/system/bin/sh\necho \"Fetching public IP...\"\nIP=$(wget -qO- https://api.ipify.org 2>/dev/null || curl -s https://api.ipify.org 2>/dev/null)\nif [ -z \"$IP\" ]; then echo \"Error: no network\"; exit 1; fi\necho \"Public IP: $IP\"\necho\nwget -qO- \"https://ip-api.com/line/$IP?fields=country,regionName,city,isp\" 2>/dev/null || curl -s \"https://ip-api.com/line/$IP?fields=country,regionName,city,isp\" 2>/dev/null\n"
     },
     {
       "name": "diskbar",
       "description": "Visual disk usage bar for /sdcard",
-      "version": "1.0",
+      "version": "1.1",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\ndf /sdcard 2>/dev/null | tail -1 | awk '{\n  used=$3; total=$2;\n  if (total > 0) pct = int(used*100/total); else pct = 0;\n  bar = \"\";\n  filled = int(pct/2);\n  for (i=0; i<filled; i++) bar = bar \"█\";\n  for (i=filled; i<50; i++) bar = bar \"░\";\n  printf \"[%s] %d%%\\n\", bar, pct;\n  printf \"%d KB usados de %d KB\\n\", used, total;\n}'\n"
+      "inline": "#!/system/bin/sh\ndf /sdcard 2>/dev/null | tail -1 | awk '{ used=$3; total=$2; if (total>0) pct=int(used*100/total); else pct=0; bar=\"\"; filled=int(pct/2); for(i=0;i<filled;i++) bar=bar\"#\"; for(i=filled;i<50;i++) bar=bar\"-\"; printf \"[%s] %d%%\\n\",bar,pct; printf \"Used: %d MB / Total: %d MB\\n\",int(used/1024),int(total/1024); }'\n"
     },
     {
-      "name": "calc",
-      "description": "Quick calculator (use: calc 1+2*3)",
+      "name": "battery",
+      "description": "Show battery level, status, temp and voltage",
       "version": "1.0",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\nif [ -z \"$1\" ]; then\n  echo \"Uso: calc <expressão>\"\n  echo \"Ex:  calc 2+3*4\"\n  exit 1\nfi\necho \"$@\" | awk '{print}' 2>/dev/null\nexpr \"$@\" 2>/dev/null || echo \"$@\" | bc 2>/dev/null || echo \"Expressão inválida\"\n"
+      "inline": "#!/system/bin/sh\nLEVEL=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo \"?\")\nSTATUS=$(cat /sys/class/power_supply/battery/status 2>/dev/null || echo \"?\")\nTEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null | awk '{printf \"%.1f\",$1/10}' || echo \"?\")\nVOLT=$(cat /sys/class/power_supply/battery/voltage_now 2>/dev/null | awk '{printf \"%.2f\",$1/1000000}' || echo \"?\")\necho \"+---------------------------+\"\necho \"| Battery Status            |\"\necho \"+---------------------------+\"\necho \"  Level:   $LEVEL%\"\necho \"  Status:  $STATUS\"\necho \"  Temp:    ${TEMP}C\"\necho \"  Voltage: ${VOLT}V\"\n"
     },
     {
-      "name": "weather-script",
-      "description": "Quick weather via wttr.in (use: weather-script [city])",
+      "name": "weather",
+      "description": "Quick weather report via wttr.in (usage: weather [city])",
+      "version": "1.1",
+      "author": "LayerDroid",
+      "inline": "#!/system/bin/sh\nCITY=\"${1:-}\"\nURL=\"https://wttr.in/${CITY}?format=4\"\necho \"Weather${CITY:+ for $CITY}:\"\nwget -qO- \"$URL\" 2>/dev/null || curl -s \"$URL\" 2>/dev/null || echo \"Error: could not fetch weather\"\n"
+    },
+    {
+      "name": "netcheck",
+      "description": "Check connectivity to Google, GitHub and Cloudflare",
       "version": "1.0",
       "author": "LayerDroid",
-      "inline": "#!/system/bin/sh\nCITY=\"${1:-}\"\nURL=\"https://wttr.in/${CITY}?format=4&lang=pt\"\nwget -qO- \"$URL\" 2>/dev/null || curl -s \"$URL\"\n"
+      "inline": "#!/system/bin/sh\ncheck() { wget -q --spider --timeout=4 \"https://$1\" 2>/dev/null && echo \"  [OK]   $1\" || echo \"  [FAIL] $1\"; }\necho \"Network connectivity check:\"\necho\ncheck \"google.com\"\ncheck \"github.com\"\ncheck \"api.ipify.org\"\ncheck \"cloudflare.com\"\necho\necho \"Done.\"\n"
+    },
+    {
+      "name": "topproc",
+      "description": "Show top 10 processes by memory usage",
+      "version": "1.0",
+      "author": "LayerDroid",
+      "inline": "#!/system/bin/sh\necho \"Top processes by memory:\"\necho\nps 2>/dev/null | awk 'NR>1{print $5,$9}' | sort -rn | head -10 | awk '{printf \"  %8s KB  %s\\n\",$1,$2}'\necho\necho \"Total: $(ps 2>/dev/null | wc -l) processes\"\n"
     }
   ]
 }
