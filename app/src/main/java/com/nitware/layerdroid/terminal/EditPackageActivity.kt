@@ -13,7 +13,11 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.nitware.layerdroid.terminal.databinding.ActivityEditPackageBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class EditPackageActivity : AppCompatActivity() {
 
@@ -205,12 +209,22 @@ class EditPackageActivity : AppCompatActivity() {
     }
 
     private fun doSave(name: String, description: String, version: String, author: String, content: String) {
-        pkgManager.upsertPackage(name, description, version, author, content)
-        originalContent = content
-        isDirty = false
-        updateTitle()
-        Toast.makeText(this, "Saved: $name  (run with: pkg run $name)", Toast.LENGTH_SHORT).show()
-        finish()
+        binding.btnSave.isEnabled = false
+        binding.btnSave.text = "Saving..."
+
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    pkgManager.upsertPackage(name, description, version, author, content)
+                }
+                Toast.makeText(this@EditPackageActivity, "Saved: $name  •  pkg run $name", Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                binding.btnSave.isEnabled = true
+                binding.btnSave.text = "Save Package"
+                Toast.makeText(this@EditPackageActivity, "Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun attemptExit() {
