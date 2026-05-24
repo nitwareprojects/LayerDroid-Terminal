@@ -11,7 +11,7 @@ class PkgManager(private val context: Context) {
         const val DEFAULT_REPO_URL =
             "https://raw.githubusercontent.com/nitwareprojects/LayerDroid-Terminal/main/pkg-manifest.json"
         private const val GITHUB_API_URL =
-            "https://api.github.com/repos/nitwareprojects/LayerDroid-Terminal/contents/pkg-manifest.json"
+            "https://api.github.com/repos/nitwareprojects/LayerDroid-Terminal/contents/pkg-manifest.json?ref=main"
         private const val BUNDLED_ASSET = "pkg-core.json"
     }
 
