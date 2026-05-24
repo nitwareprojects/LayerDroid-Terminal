@@ -8,7 +8,7 @@ class PkgManager(private val context: Context) {
 
     companion object {
         const val DEFAULT_REPO_URL =
-            "https://raw.githubusercontent.com/nitwareprojects/layerdroid-terminal/main/app/src/main/assets/pkg-core.json"
+            "https://raw.githubusercontent.com/nitwareprojects/LayerDroid-Terminal/claude/android-terminal-app-s78uq/app/src/main/assets/pkg-core.json"
         private const val BUNDLED_ASSET = "pkg-core.json"
     }
 

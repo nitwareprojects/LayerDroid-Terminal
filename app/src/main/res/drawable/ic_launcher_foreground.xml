@@ -5,19 +5,58 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- ">" chevron — bold, green, centered in safe zone -->
+    <!-- Terminal window frame -->
     <path
-        android:pathData="M20,26 L64,54 L20,82"
+        android:pathData="M18,22 L90,22 L90,90 L18,90 Z"
+        android:fillColor="#161B22"
+        android:strokeColor="#30363D"
+        android:strokeWidth="2.5" />
+
+    <!-- Title bar background -->
+    <path
+        android:pathData="M18,22 L90,22 L90,36 L18,36 Z"
+        android:fillColor="#21262D" />
+
+    <!-- Title bar separator line -->
+    <path
+        android:pathData="M18,36 L90,36"
+        android:strokeColor="#30363D"
+        android:strokeWidth="1.5" />
+
+    <!-- Traffic-light dots -->
+    <!-- Red dot -->
+    <path
+        android:pathData="M29,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#FF5F57" />
+    <!-- Yellow dot -->
+    <path
+        android:pathData="M41,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#FEBC2E" />
+    <!-- Green dot -->
+    <path
+        android:pathData="M53,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#28C840" />
+
+    <!-- ">_" prompt — bright green, bold -->
+    <!-- ">" chevron -->
+    <path
+        android:pathData="M26,52 L40,62 L26,72"
         android:strokeColor="#56D364"
-        android:strokeWidth="10"
+        android:strokeWidth="5.5"
         android:fillColor="@android:color/transparent"
         android:strokeLineJoin="round"
         android:strokeLineCap="round" />
 
-    <!-- "_" cursor underline -->
+    <!-- "_" cursor -->
     <path
-        android:pathData="M70,82 L96,82"
+        android:pathData="M46,72 L68,72"
         android:strokeColor="#56D364"
-        android:strokeWidth="10"
+        android:strokeWidth="5.5"
         android:strokeLineCap="round" />
+
+    <!-- Blinking cursor block (faint) -->
+    <path
+        android:pathData="M72,56 L82,56 L82,72 L72,72 Z"
+        android:fillColor="#56D364"
+        android:fillAlpha="0.35" />
 </vector>
