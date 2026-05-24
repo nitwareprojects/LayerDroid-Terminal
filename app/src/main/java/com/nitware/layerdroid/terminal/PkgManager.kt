@@ -1,6 +1,7 @@
 package com.nitware.layerdroid.terminal
 
 import android.content.Context
+import android.util.Base64
 import org.json.JSONObject
 import java.io.File
 
@@ -8,7 +9,9 @@ class PkgManager(private val context: Context) {
 
     companion object {
         const val DEFAULT_REPO_URL =
-            "https://raw.githubusercontent.com/nitwareprojects/LayerDroid-Terminal/claude/android-terminal-app-s78uq/pkg-manifest.json"
+            "https://raw.githubusercontent.com/nitwareprojects/LayerDroid-Terminal/main/pkg-manifest.json"
+        private const val GITHUB_API_URL =
+            "https://api.github.com/repos/nitwareprojects/LayerDroid-Terminal/contents/pkg-manifest.json"
         private const val BUNDLED_ASSET = "pkg-core.json"
     }
 
@@ -29,29 +32,62 @@ class PkgManager(private val context: Context) {
 
     suspend fun cmdUpdate(): List<TerminalLine> {
         val lines = mutableListOf<TerminalLine>()
-        lines.add(TerminalLine("Updating manifest from $repoUrl ...", TerminalLine.Type.INFO))
-        return try {
-            val text = HttpClient.get(repoUrl, timeoutMs = 8000)
-            JSONObject(text)
-            manifestCacheFile.writeText(text)
-            val manifest = JSONObject(text)
-            val count = manifest.optJSONArray("scripts")?.length() ?: 0
-            lines.add(TerminalLine("Manifest updated: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
-            lines
-        } catch (e: Exception) {
-            lines.add(TerminalLine("Warning: could not fetch remote manifest: ${e.message}", TerminalLine.Type.WARNING))
-            lines.add(TerminalLine("  Falling back to bundled pkg-core manifest...", TerminalLine.Type.WARNING))
-            try {
-                val bundled = context.assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
-                val manifest = JSONObject(bundled)
-                manifestCacheFile.writeText(bundled)
+        val url = repoUrl
+        lines.add(TerminalLine("Fetching manifest...", TerminalLine.Type.INFO))
+
+        // 1. Try the configured raw URL
+        val text = tryFetchRaw(url)
+            ?: tryFetchGithubApi(if (url == DEFAULT_REPO_URL) GITHUB_API_URL else null)
+
+        if (text != null) {
+            return try {
+                val manifest = JSONObject(text)
+                manifestCacheFile.writeText(text)
                 val count = manifest.optJSONArray("scripts")?.length() ?: 0
-                lines.add(TerminalLine("Loaded bundled manifest: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
-            } catch (ex: Exception) {
-                lines.add(TerminalLine("  Could not load bundled manifest: ${ex.message}", TerminalLine.Type.WARNING))
+                lines.add(TerminalLine("Manifest updated: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
+                lines
+            } catch (e: Exception) {
+                lines.add(TerminalLine("Invalid manifest format: ${e.message}", TerminalLine.Type.ERROR))
+                lines
             }
+        }
+
+        // 2. Fall back to bundled asset
+        lines.add(TerminalLine("Remote unavailable — using bundled manifest.", TerminalLine.Type.WARNING))
+        return try {
+            val bundled = context.assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
+            val manifest = JSONObject(bundled)
+            manifestCacheFile.writeText(bundled)
+            val count = manifest.optJSONArray("scripts")?.length() ?: 0
+            lines.add(TerminalLine("Loaded bundled manifest: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
+            lines
+        } catch (ex: Exception) {
+            lines.add(TerminalLine("Could not load bundled manifest: ${ex.message}", TerminalLine.Type.ERROR))
             lines
         }
+    }
+
+    private suspend fun tryFetchRaw(url: String): String? = try {
+        val text = HttpClient.get(url, timeoutMs = 8000)
+        JSONObject(text) // validate it's JSON
+        text
+    } catch (_: Exception) { null }
+
+    private suspend fun tryFetchGithubApi(url: String?): String? {
+        url ?: return null
+        return try {
+            val response = HttpClient.get(
+                url,
+                timeoutMs = 8000,
+                headers = mapOf("Accept" to "application/vnd.github+json")
+            )
+            val obj = JSONObject(response)
+            val encoded = obj.optString("content", "").replace("\n", "")
+            if (encoded.isEmpty()) return null
+            val decoded = String(Base64.decode(encoded, Base64.DEFAULT))
+            JSONObject(decoded) // validate it's a proper manifest
+            decoded
+        } catch (_: Exception) { null }
     }
 
     fun cmdList(): List<TerminalLine> {
