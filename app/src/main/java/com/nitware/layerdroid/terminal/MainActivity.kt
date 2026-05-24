@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             inflateMenu(R.menu.terminal_menu)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    R.id.action_scripts -> { startActivity(android.content.Intent(this, ScriptsActivity::class.java)); true }
+                    R.id.action_scripts -> { startActivity(android.content.Intent(this@MainActivity, ScriptsActivity::class.java)); true }
                     R.id.action_clear -> { viewModel.executeCommand("clear"); true }
                     R.id.action_copy -> { copySelection(); true }
                     R.id.action_paste -> { pasteClipboard(); true }
