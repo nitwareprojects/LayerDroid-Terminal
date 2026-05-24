@@ -159,7 +159,7 @@ object DeviceCommands {
             if (tts == null) {
                 tts = TextToSpeech(context.applicationContext) { status ->
                     if (status == TextToSpeech.SUCCESS) {
-                        tts?.language = Locale("pt", "BR")
+                        tts?.language = Locale.US
                     }
                 }
                 Thread.sleep(700)

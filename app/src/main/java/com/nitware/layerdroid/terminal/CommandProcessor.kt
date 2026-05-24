@@ -1702,7 +1702,7 @@ class CommandProcessor(private val context: Context) {
         val rows = 5
         val lines = Array(rows) { StringBuilder() }
         for (ch in text) {
-            val glyph = charMap[ch] ?: charMap[' ']!!
+            val glyph = charMap[ch] ?: charMap[' '] ?: List(5) { "    " }
             for (row in 0 until rows) {
                 lines[row].append(glyph.getOrElse(row) { "    " })
                 lines[row].append("  ")

@@ -16,7 +16,7 @@ object NetCommands {
 
     suspend fun weather(args: List<String>): List<TerminalLine> {
         val location = args.joinToString("+").ifEmpty { "" }
-        val url = "https://wttr.in/${HttpClient.urlEncode(location).replace("%2B", "+")}?lang=pt&format=4"
+        val url = "https://wttr.in/${HttpClient.urlEncode(location).replace("%2B", "+")}?lang=en&format=4"
         return try {
             val resp = HttpClient.get(url, timeoutMs = 8000)
             listOf(TerminalLine(resp.trim(), TerminalLine.Type.SUCCESS))
@@ -27,7 +27,7 @@ object NetCommands {
 
     suspend fun weatherAscii(args: List<String>): List<TerminalLine> {
         val location = args.joinToString("+").ifEmpty { "" }
-        val url = "https://wttr.in/${HttpClient.urlEncode(location).replace("%2B", "+")}?0&lang=pt&T"
+        val url = "https://wttr.in/${HttpClient.urlEncode(location).replace("%2B", "+")}?0&lang=en&T"
         return try {
             val resp = HttpClient.get(url, timeoutMs = 12000)
             resp.lines().map { TerminalLine(it, TerminalLine.Type.SUCCESS) }
