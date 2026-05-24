@@ -44,7 +44,7 @@ class TerminalAdapter : ListAdapter<TerminalLine, TerminalAdapter.ViewHolder>(DI
         holder.binding.tvLine.apply {
             text = line.text
             typeface = Typeface.MONOSPACE
-            textSize = 13f
+            textSize = 14f
 
             setTextColor(
                 when (line.type) {

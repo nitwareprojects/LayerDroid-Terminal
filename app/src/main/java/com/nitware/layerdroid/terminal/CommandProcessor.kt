@@ -7,14 +7,26 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
-import java.net.InetAddress
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
 
 class CommandProcessor(private val context: Context) {
+
+    companion object {
+        private const val TERMUX_PREFIX = "/data/data/com.termux/files/usr"
+        private const val TERMUX_BIN    = "$TERMUX_PREFIX/bin"
+    }
+
+    private val hasTermux: Boolean get() = File(TERMUX_BIN).canExecute()
 
     var currentDir: File = Environment.getExternalStorageDirectory().let {
         if (it.canRead()) it else context.filesDir
@@ -22,13 +34,19 @@ class CommandProcessor(private val context: Context) {
     private val shell = ShellExecutor()
     private val pkg = PkgManager(context)
     private val aliases = mutableMapOf<String, String>()
-    private val envVars = mutableMapOf<String, String>(
-        "HOME" to currentDir.absolutePath,
-        "SHELL" to "layerdroid",
-        "TERM" to "xterm-256color",
-        "USER" to "user",
-        "PATH" to "/system/bin:/system/xbin:/sbin"
-    )
+    private val envVars: MutableMap<String, String> = mutableMapOf<String, String>().apply {
+        val base = "/system/bin:/system/xbin:/sbin"
+        put("HOME", currentDir.absolutePath)
+        put("SHELL", "layerdroid")
+        put("TERM", "xterm-256color")
+        put("USER", "user")
+        put("ANDROID_ROOT", "/system")
+        put("PATH", if (File(TERMUX_BIN).canExecute()) "$TERMUX_BIN:$base" else base)
+        if (File(TERMUX_BIN).canExecute()) {
+            put("PREFIX", TERMUX_PREFIX)
+            put("LD_LIBRARY_PATH", "$TERMUX_PREFIX/lib")
+        }
+    }
     val commandHistory = mutableListOf<String>()
 
     data class Result(
@@ -46,6 +64,12 @@ class CommandProcessor(private val context: Context) {
         val expanded = aliases[input.substringBefore(" ")]?.let {
             "$it ${input.substringAfter(" ", "")}"
         }?.trim() ?: input
+
+        // Delegate to shell for pipes, redirects, compound statements
+        if (" | " in expanded || " > " in expanded || " >> " in expanded ||
+            " < " in expanded || " && " in expanded || " || " in expanded || "; " in expanded) {
+            return shell.executeLines(expanded, currentDir, envVars = envVars).let { Result(it) }
+        }
 
         val parts = parseArgs(expanded)
         if (parts.isEmpty()) return Result(emptyList())
@@ -157,12 +181,16 @@ class CommandProcessor(private val context: Context) {
             "joke", "piada" -> Result(NetCommands.joke())
             "catfact" -> Result(NetCommands.catFact())
             "fact", "uselessfact" -> Result(NetCommands.uselessFact())
-            "coin", "btc", "bitcoin" -> Result(NetCommands.coin())
+            "coin", "btc", "bitcoin", "crypto" -> Result(NetCommands.coin(args))
             "qr", "qrcode" -> {
                 val (lines, url) = NetCommands.qrCode(args)
                 val intent = url?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) } }
                 Result(lines, launchIntent = intent)
             }
+            "http", "fetch" -> Result(NetCommands.httpRequest(args))
+            "dns", "nslookup", "dig" -> Result(NetCommands.dns(args))
+            "port", "portcheck" -> Result(NetCommands.portCheck(args))
+            "speedtest", "speed" -> Result(NetCommands.speedtest())
 
             // ─── Device commands ─────
             "battery", "bat" -> Result(DeviceCommands.battery(context))
@@ -179,6 +207,27 @@ class CommandProcessor(private val context: Context) {
             "volume", "vol" -> Result(DeviceCommands.volumeInfo(context))
             "wifi" -> Result(DeviceCommands.wifiInfo(context))
             "device", "deviceinfo" -> Result(DeviceCommands.deviceInfo(context))
+
+            // ─── Encoding / crypto ────
+            "hash" -> cmdHash(args)
+            "encode" -> cmdEncode(args)
+            "decode" -> cmdDecode(args)
+            "jq" -> cmdJq(args)
+            "calc", "math" -> cmdCalc(args)
+
+            // ─── Open in browser ──────
+            "open", "browse", "xdg-open" -> cmdOpen(args)
+
+            // ─── Runtime / Termux integration ─────
+            "python", "python3", "python2" -> cmdRuntime("python3", "python", args = args)
+            "node", "nodejs" -> cmdRuntime("node", "nodejs", args = args)
+            "php" -> cmdRuntime("php", args = args)
+            "ruby" -> cmdRuntime("ruby", args = args)
+            "lua" -> cmdRuntime("lua", args = args)
+            "git" -> cmdRuntime("git", args = args)
+            "ssh" -> cmdSsh(args)
+            "termux-info", "termux" -> cmdTermuxInfo()
+
             else -> {
                 // Tenta executar como script instalado via pkg
                 if (pkg.isInstalled(cmd)) {
@@ -862,46 +911,62 @@ class CommandProcessor(private val context: Context) {
             "${h}h ${m}m"
         } catch (e: Exception) { "?" }
 
+        val termuxStatus = if (hasTermux) "Termux:  ${File(TERMUX_BIN).listFiles()?.size ?: 0} pkgs"
+                           else "Termux:  não instalado"
+
         val logo = listOf(
-            "  ┌─────────────────┐   ",
-            "  │  >_  LayerDroid │   ",
-            "  └─────────────────┘   ",
-            "   ╔═══╗ ╔═══╗ ╔═══╗   ",
-            "   ║   ║ ║   ║ ║   ║   ",
-            "   ╚═══╝ ╚═══╝ ╚═══╝   ",
-            "                        ",
-            "                        ",
-            "                        ",
-            "                        ",
-            "                        ",
-            "                        "
+            "  ╔══════════════════╗",
+            "  ╠══════════════════╣",
+            "  ║  ██    ████      ║",
+            "  ║  ██    ██  ██    ║",
+            "  ║  ██    ██  ██    ║",
+            "  ║  ██    ██  ██    ║",
+            "  ║  ████  ████      ║",
+            "  ╠══════════════════╣",
+            "  ║  >_ LayerDroid   ║",
+            "  ╠══════════════════╣",
+            "  ║  Android  v1.0   ║",
+            "  ╚══════════════════╝"
         )
         val info = listOf(
             "user@$hostname",
             "─".repeat("user@$hostname".length),
-            "OS:       Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-            "Kernel:   $kernel",
-            "Device:   ${Build.MANUFACTURER} ${Build.MODEL}",
-            "Board:    ${Build.BOARD}",
-            "CPU:      ${Build.HARDWARE} ($cores cores, $abi)",
-            "Memory:   $usedMem / $totalMem",
-            "Storage:  $storageUsed / $storageTotal",
-            "Battery:  $battery",
-            "Uptime:   $uptime",
-            "Shell:    LayerDroid Terminal v1.0"
+            "OS:      Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            "Kernel:  $kernel",
+            "Device:  ${Build.MANUFACTURER} ${Build.MODEL}",
+            "Board:   ${Build.BOARD}",
+            "CPU:     ${Build.HARDWARE} ($cores cores, $abi)",
+            "Memory:  $usedMem / $totalMem",
+            "Storage: $storageUsed / $storageTotal",
+            "Battery: $battery",
+            "Uptime:  $uptime",
+            termuxStatus
+        )
+
+        val lineTypes = listOf(
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS
+        )
+        val infoTypes = listOf(
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.SYSTEM,
+            TerminalLine.Type.INFO,    TerminalLine.Type.OUTPUT,
+            TerminalLine.Type.SUCCESS, TerminalLine.Type.OUTPUT,
+            TerminalLine.Type.INFO,    TerminalLine.Type.WARNING,
+            TerminalLine.Type.INFO,    TerminalLine.Type.SUCCESS,
+            TerminalLine.Type.OUTPUT,  TerminalLine.Type.INFO
         )
 
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         val maxRows = maxOf(logo.size, info.size)
         for (i in 0 until maxRows) {
-            val l = logo.getOrElse(i) { "                        " }
+            val l = logo.getOrElse(i) { "                      " }
             val r = info.getOrElse(i) { "" }
-            val type = when {
-                i == 0 -> TerminalLine.Type.SUCCESS
-                i == 1 -> TerminalLine.Type.SYSTEM
-                else -> TerminalLine.Type.OUTPUT
-            }
+            val type = infoTypes.getOrElse(i) { TerminalLine.Type.OUTPUT }
             lines.add(TerminalLine("$l  $r", type))
         }
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
@@ -1076,11 +1141,57 @@ class CommandProcessor(private val context: Context) {
     private suspend fun cmdWget(args: List<String>): Result {
         val url = args.firstOrNull { !it.startsWith("-") }
             ?: return Result(listOf(TerminalLine("Usage: wget <url>", TerminalLine.Type.WARNING)))
-        return shell.executeLines("curl -L -O '$url' 2>&1", currentDir, 30000L).let { Result(it) }
+
+        // Try system wget/curl first
+        val shellResult = shell.executeLines(
+            "wget -q --show-progress '$url' 2>&1 || curl -L -O '$url' 2>&1",
+            currentDir, 30000L, envVars
+        )
+        if (shellResult.isNotEmpty() && shellResult.none { "not found" in it.text || "No such file" in it.text }) {
+            return Result(shellResult)
+        }
+        // Fallback: built-in download
+        return try {
+            val filename = url.substringAfterLast("/").substringBefore("?").ifEmpty { "download" }
+            val dest = File(currentDir, filename)
+            val lines = mutableListOf<TerminalLine>()
+            lines.add(TerminalLine("--  $url", TerminalLine.Type.INFO))
+            val bytes = HttpClient.download(url, dest)
+            lines.add(TerminalLine("'${dest.name}' salvo [${bytes / 1024} KB]", TerminalLine.Type.SUCCESS))
+            Result(lines)
+        } catch (e: Exception) {
+            Result(listOf(TerminalLine("wget: ${e.message}", TerminalLine.Type.ERROR)))
+        }
     }
 
     private suspend fun cmdCurl(args: List<String>): Result {
-        return shell.executeLines("curl ${args.joinToString(" ")} 2>&1", currentDir, 15000L).let { Result(it) }
+        // Try system curl
+        val shellResult = shell.executeLines("curl ${args.joinToString(" ")} 2>&1", currentDir, 15000L, envVars)
+        if (shellResult.isNotEmpty() && shellResult.none { "not found" in it.text || "No such file" in it.text }) {
+            return Result(shellResult)
+        }
+        // Fallback: built-in HttpClient
+        val url = args.firstOrNull { it.startsWith("http") }
+            ?: return Result(listOf(TerminalLine("Usage: curl [options] <url>", TerminalLine.Type.WARNING)))
+        val method = run { val i = args.indexOf("-X"); if (i >= 0 && i + 1 < args.size) args[i + 1].uppercase() else "GET" }
+        val data = run { val i = args.indexOf("-d").takeIf { it >= 0 } ?: args.indexOf("--data").takeIf { it >= 0 }; if (i != null && i + 1 < args.size) args[i + 1] else null }
+        val extraHeaders = mutableMapOf<String, String>()
+        for (i in args.indices) {
+            if ((args[i] == "-H" || args[i] == "--header") && i + 1 < args.size) {
+                val h = args[i + 1]
+                val c = h.indexOf(":"); if (c > 0) extraHeaders[h.substring(0, c).trim()] = h.substring(c + 1).trim()
+            }
+        }
+        return try {
+            val body = if (method in listOf("POST", "PUT", "PATCH") || data != null) {
+                HttpClient.post(url, data ?: "", headers = extraHeaders)
+            } else {
+                HttpClient.get(url, headers = extraHeaders)
+            }
+            Result(body.lines().take(200).map { TerminalLine(it, TerminalLine.Type.OUTPUT) })
+        } catch (e: Exception) {
+            Result(listOf(TerminalLine("curl: ${e.message}", TerminalLine.Type.ERROR)))
+        }
     }
 
     // ─── Utility ───────────────────────────────────────────────────────────────
@@ -1206,61 +1317,311 @@ class CommandProcessor(private val context: Context) {
         return Result(lines)
     }
 
+    // ─── Encoding / Hash ──────────────────────────────────────────────────────
+
+    private fun cmdHash(args: List<String>): Result {
+        val algo = args.firstOrNull()?.uppercase()
+            ?: return Result(listOf(TerminalLine("Usage: hash <md5|sha1|sha256|sha512> <texto>", TerminalLine.Type.WARNING)))
+        val text = args.drop(1).joinToString(" ")
+        if (text.isEmpty()) return Result(listOf(TerminalLine("hash: texto necessário", TerminalLine.Type.WARNING)))
+        val mdAlgo = when (algo) {
+            "MD5"          -> "MD5"
+            "SHA1", "SHA-1" -> "SHA-1"
+            "SHA256", "SHA-256" -> "SHA-256"
+            "SHA512", "SHA-512" -> "SHA-512"
+            else -> return Result(listOf(TerminalLine("hash: algoritmo inválido. Use: md5, sha1, sha256, sha512", TerminalLine.Type.ERROR)))
+        }
+        return try {
+            val hash = MessageDigest.getInstance(mdAlgo).digest(text.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+            Result(listOf(
+                TerminalLine("$mdAlgo  $hash", TerminalLine.Type.SUCCESS)
+            ))
+        } catch (e: Exception) {
+            Result(listOf(TerminalLine("hash: ${e.message}", TerminalLine.Type.ERROR)))
+        }
+    }
+
+    private fun cmdEncode(args: List<String>): Result {
+        val type = args.firstOrNull()?.lowercase()
+            ?: return Result(listOf(TerminalLine("Usage: encode <base64|url|hex> <texto>", TerminalLine.Type.WARNING)))
+        val text = args.drop(1).joinToString(" ")
+        if (text.isEmpty()) return Result(listOf(TerminalLine("encode: texto necessário", TerminalLine.Type.WARNING)))
+        return when (type) {
+            "base64", "b64" -> Result(listOf(TerminalLine(
+                Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP), TerminalLine.Type.SUCCESS
+            )))
+            "url" -> Result(listOf(TerminalLine(
+                URLEncoder.encode(text, "UTF-8"), TerminalLine.Type.SUCCESS
+            )))
+            "hex" -> Result(listOf(TerminalLine(
+                text.toByteArray().joinToString("") { "%02x".format(it) }, TerminalLine.Type.SUCCESS
+            )))
+            else -> Result(listOf(TerminalLine("encode: tipo inválido. Use: base64, url, hex", TerminalLine.Type.ERROR)))
+        }
+    }
+
+    private fun cmdDecode(args: List<String>): Result {
+        val type = args.firstOrNull()?.lowercase()
+            ?: return Result(listOf(TerminalLine("Usage: decode <base64|url|hex> <encoded>", TerminalLine.Type.WARNING)))
+        val text = args.drop(1).joinToString(" ")
+        if (text.isEmpty()) return Result(listOf(TerminalLine("decode: texto necessário", TerminalLine.Type.WARNING)))
+        return when (type) {
+            "base64", "b64" -> try {
+                Result(listOf(TerminalLine(String(Base64.decode(text, Base64.DEFAULT)), TerminalLine.Type.SUCCESS)))
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: base64 inválido", TerminalLine.Type.ERROR))) }
+            "url" -> try {
+                Result(listOf(TerminalLine(URLDecoder.decode(text, "UTF-8"), TerminalLine.Type.SUCCESS)))
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: URL encoding inválido", TerminalLine.Type.ERROR))) }
+            "hex" -> try {
+                val bytes = text.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                Result(listOf(TerminalLine(String(bytes), TerminalLine.Type.SUCCESS)))
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: hex inválido", TerminalLine.Type.ERROR))) }
+            else -> Result(listOf(TerminalLine("decode: tipo inválido. Use: base64, url, hex", TerminalLine.Type.ERROR)))
+        }
+    }
+
+    // ─── JSON query ───────────────────────────────────────────────────────────
+
+    private fun cmdJq(args: List<String>): Result {
+        val query = args.firstOrNull { it.startsWith(".") }
+        val fileArg = args.lastOrNull { !it.startsWith(".") }
+            ?: return Result(listOf(
+                TerminalLine("Usage: jq [.field] <arquivo.json>", TerminalLine.Type.WARNING),
+                TerminalLine("  ex:  jq data.json", TerminalLine.Type.OUTPUT),
+                TerminalLine("  ex:  jq .name data.json", TerminalLine.Type.OUTPUT)
+            ))
+        val file = resolveFile(fileArg)
+        if (!file.exists()) return Result(listOf(TerminalLine("jq: $fileArg: arquivo não encontrado", TerminalLine.Type.ERROR)))
+        return try {
+            val content = file.readText().trim()
+            val parsed: Any = if (content.startsWith("[")) JSONArray(content) else JSONObject(content)
+            val result = if (query != null && query.length > 1 && parsed is JSONObject) {
+                val keys = query.removePrefix(".").split(".")
+                var cur: Any? = parsed
+                for (k in keys) cur = (cur as? JSONObject)?.opt(k)
+                when (cur) {
+                    is JSONObject -> cur.toString(2)
+                    is JSONArray -> cur.toString(2)
+                    null -> "null"
+                    else -> cur.toString()
+                }
+            } else {
+                if (parsed is JSONObject) parsed.toString(2) else (parsed as JSONArray).toString(2)
+            }
+            Result(result.lines().map { TerminalLine(it, TerminalLine.Type.OUTPUT) })
+        } catch (e: Exception) {
+            Result(listOf(TerminalLine("jq: ${e.message}", TerminalLine.Type.ERROR)))
+        }
+    }
+
+    // ─── Calculator ───────────────────────────────────────────────────────────
+
+    private fun cmdCalc(args: List<String>): Result {
+        val expr = args.joinToString(" ").trim()
+        if (expr.isEmpty()) return Result(listOf(
+            TerminalLine("Usage: calc <expressão>", TerminalLine.Type.WARNING),
+            TerminalLine("  ex: calc 2+2   calc sqrt(16)   calc pi*2   calc 10^3", TerminalLine.Type.OUTPUT)
+        ))
+        return try {
+            val result = MathParser(expr.replace(" ", "")).parse()
+            val display = if (result == Math.floor(result) && !result.isInfinite()) result.toLong().toString()
+                          else "%.10g".format(result).trimEnd('0').trimEnd('.')
+            Result(listOf(TerminalLine("= $display", TerminalLine.Type.SUCCESS)))
+        } catch (e: Exception) {
+            Result(listOf(TerminalLine("calc: expressão inválida — ${e.message}", TerminalLine.Type.ERROR)))
+        }
+    }
+
+    private class MathParser(private val e: String) {
+        private var p = 0
+        fun parse() = expr().also { if (p < e.length) throw IllegalArgumentException("unexpected '${e[p]}'") }
+        private fun expr(): Double {
+            var r = term()
+            while (p < e.length && (e[p] == '+' || e[p] == '-')) { val op = e[p++]; r = if (op == '+') r + term() else r - term() }
+            return r
+        }
+        private fun term(): Double {
+            var r = pow()
+            while (p < e.length && (e[p] == '*' || e[p] == '/')) { val op = e[p++]; r = if (op == '*') r * pow() else r / pow() }
+            return r
+        }
+        private fun pow(): Double { val b = unary(); return if (p < e.length && e[p] == '^') { p++; Math.pow(b, unary()) } else b }
+        private fun unary(): Double { if (p < e.length && e[p] == '-') { p++; return -primary() }; if (p < e.length && e[p] == '+') p++; return primary() }
+        private fun primary(): Double {
+            if (p < e.length && e[p] == '(') { p++; val r = expr(); if (p < e.length && e[p] == ')') p++; return r }
+            val wordEnd = e.indexOfFirst { idx -> idx >= p && !e[idx].isLetter() }.takeIf { it > p } ?: run { var i = p; while (i < e.length && e[i].isLetter()) i++; i }
+            if (wordEnd > p) {
+                val name = e.substring(p, wordEnd); p = wordEnd
+                if (p < e.length && e[p] == '(') {
+                    p++; val a = expr(); if (p < e.length && e[p] == ')') p++
+                    return when (name) {
+                        "sqrt" -> Math.sqrt(a); "abs" -> Math.abs(a); "sin" -> Math.sin(a)
+                        "cos" -> Math.cos(a); "tan" -> Math.tan(a); "log" -> Math.log10(a)
+                        "ln" -> Math.log(a); "floor" -> Math.floor(a); "ceil" -> Math.ceil(a)
+                        "round" -> Math.round(a).toDouble(); "exp" -> Math.exp(a)
+                        else -> throw IllegalArgumentException("função desconhecida: $name")
+                    }
+                }
+                return when (name) { "pi" -> Math.PI; "e" -> Math.E; else -> throw IllegalArgumentException("constante desconhecida: $name") }
+            }
+            val start = p
+            if (p < e.length && e[p] == '.') p++
+            while (p < e.length && (e[p].isDigit() || e[p] == '.')) p++
+            if (p == start) throw IllegalArgumentException("número esperado na posição $p")
+            return e.substring(start, p).toDouble()
+        }
+    }
+
+    // ─── Open URL ─────────────────────────────────────────────────────────────
+
+    private fun cmdOpen(args: List<String>): Result {
+        val raw = args.firstOrNull()
+            ?: return Result(listOf(TerminalLine("Usage: open <url>", TerminalLine.Type.WARNING)))
+        val url = if (!raw.startsWith("http")) "https://$raw" else raw
+        return Result(
+            listOf(TerminalLine("Abrindo: $url", TerminalLine.Type.INFO)),
+            launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        )
+    }
+
+    // ─── Runtime (Python / Node / Git / etc.) ─────────────────────────────────
+
+    private suspend fun cmdRuntime(vararg names: String, args: List<String>): Result {
+        val candidates = buildList {
+            names.forEach { n -> add(n); add("$TERMUX_BIN/$n") }
+        }
+        for (bin in candidates) {
+            val result = shell.executeLines("$bin ${args.joinToString(" ")} 2>&1", currentDir, 30000L, envVars)
+            if (result.isNotEmpty() && result.none { "not found" in it.text || "No such file" in it.text || "cannot find" in it.text }) {
+                return Result(result)
+            }
+        }
+        val name = names.first()
+        return Result(listOf(
+            TerminalLine("$name: não encontrado no sistema", TerminalLine.Type.ERROR),
+            TerminalLine("  Se o Termux estiver instalado: pkg install $name", TerminalLine.Type.INFO),
+            if (hasTermux) TerminalLine("  Termux detectado — execute: pkg install $name no Termux", TerminalLine.Type.WARNING)
+            else TerminalLine("  Instale o Termux para usar pacotes Linux reais", TerminalLine.Type.WARNING)
+        ))
+    }
+
+    private suspend fun cmdSsh(args: List<String>): Result {
+        if (args.isEmpty()) return Result(listOf(TerminalLine("Usage: ssh [user@]host [-p port]", TerminalLine.Type.WARNING)))
+        // Try via Termux or system ssh
+        val result = shell.executeLines("ssh ${args.joinToString(" ")} 2>&1", currentDir, 30000L, envVars)
+        if (result.isNotEmpty() && result.none { "not found" in it.text }) return Result(result)
+        return Result(listOf(
+            TerminalLine("ssh: cliente SSH não encontrado", TerminalLine.Type.ERROR),
+            TerminalLine("  Instale o Termux e execute: pkg install openssh", TerminalLine.Type.INFO)
+        ))
+    }
+
+    private fun cmdTermuxInfo(): Result {
+        val lines = mutableListOf<TerminalLine>()
+        lines.add(TerminalLine("Integração com Termux", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM))
+        if (hasTermux) {
+            val binDir = File(TERMUX_BIN)
+            val pkgCount = binDir.listFiles()?.size ?: 0
+            lines.add(TerminalLine("Status:   Detectado e ativo", TerminalLine.Type.SUCCESS))
+            lines.add(TerminalLine("Prefix:   $TERMUX_PREFIX", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("Binários: $pkgCount executáveis disponíveis", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("PATH:     ${envVars["PATH"]}", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("Binários do Termux disponíveis nesta sessão.", TerminalLine.Type.SUCCESS))
+        } else {
+            lines.add(TerminalLine("Status:   Não detectado", TerminalLine.Type.WARNING))
+            lines.add(TerminalLine("Instale o Termux (F-Droid ou Play Store) para:", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  • Python, Node.js, Ruby, PHP", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  • Git, SSH, curl, wget nativos", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  • 1000+ pacotes Linux", TerminalLine.Type.OUTPUT))
+        }
+        return Result(lines)
+    }
+
     private fun cmdHelp(args: List<String>): Result {
         if (args.isNotEmpty()) return cmdMan(args)
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("╔═══════════════════════════════════════╗", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("║      LayerDroid Terminal v1.0         ║", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("╚═══════════════════════════════════════╝", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  ╔══════════════════════════════════════╗", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  ║    LayerDroid Terminal  v1.0         ║", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  ║    Terminal Android — Powered Up     ║", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  ╚══════════════════════════════════════╝", TerminalLine.Type.SUCCESS))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("NAVEGAÇÃO & ARQUIVOS", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  ls [-la]    ll    la    cd    pwd", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  cat    mkdir    rm [-rf]    touch", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  cp    mv    find    tree    stat    file", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  grep [-inv]    head    tail    wc    du", TerminalLine.Type.OUTPUT))
+        fun sec(title: String) { lines.add(TerminalLine("  $title", TerminalLine.Type.INFO)) }
+        fun cmd(text: String) { lines.add(TerminalLine("    $text", TerminalLine.Type.OUTPUT)) }
+
+        sec("ARQUIVOS & NAVEGAÇÃO")
+        cmd("ls [-la]  ll  la  cd  pwd  tree  stat  file  du")
+        cmd("cat  mkdir  rm [-rf]  touch  cp  mv  chmod  ln")
+        cmd("grep [-inv]  head  tail  wc  find  sort  uniq")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("EDITOR", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  nano <arquivo>    vi    vim    edit", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  view <arquivo>  (somente leitura)", TerminalLine.Type.OUTPUT))
+
+        sec("EDITOR DE TEXTO")
+        cmd("nano <file>  vi  vim  edit  view (somente leitura)")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("PACOTES / SCRIPTS  (pkg help para detalhes)", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  pkg update    pkg list    pkg available", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  pkg install <nome>    pkg run <nome>    pkg remove <nome>", TerminalLine.Type.OUTPUT))
+
+        sec("INTERNET & HTTP")
+        cmd("http [GET|POST] <url> [Header:V] [key=val]")
+        cmd("curl <url>    wget <url>")
+        cmd("weather [cidade]   myip   ipinfo [ip]   speedtest")
+        cmd("dns <host>   port <host> <port>")
+        cmd("gh <user>   gh-repo <owner/repo>   tldr <cmd>")
+        cmd("define <word>   joke   catfact   fact")
+        cmd("coin [btc,eth,sol]   qr <texto>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("INTERNET", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  weather [cidade]    myip    ipinfo [ip]", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  gh <user>    gh-repo <owner/repo>    tldr <cmd>", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  define <palavra>    joke    catfact    coin    qr <texto>", TerminalLine.Type.OUTPUT))
+
+        sec("CRYPTO / ENCODING")
+        cmd("hash <md5|sha1|sha256|sha512> <texto>")
+        cmd("encode <base64|url|hex> <texto>")
+        cmd("decode <base64|url|hex> <encoded>")
+        cmd("jq [.field] <arquivo.json>")
+        cmd("calc <expr>   ex: calc sqrt(16)*pi")
+        cmd("base64  md5sum  sha256sum")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("DISPOSITIVO", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  battery    device    wifi    volume", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  clip   copy <txt>   vibrate [ms]   notify <título> <msg>", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  share <txt>    torch on|off    tts <texto>", TerminalLine.Type.OUTPUT))
+
+        sec("PACOTES (pkg help para detalhes)")
+        cmd("pkg update   pkg list   pkg available   pkg search <q>")
+        cmd("pkg install <nome>   pkg remove <nome>   pkg run <nome>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("SISTEMA", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  uname    whoami    id    hostname    date", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  uptime    free    df    ps    top    lscpu", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  mount    lsblk    getprop    neofetch", TerminalLine.Type.OUTPUT))
+
+        sec("RUNTIMES (requer Termux)")
+        cmd("python3 [script]   node [script]   php   ruby   lua")
+        cmd("git <cmd>   ssh [user@]host   termux-info")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("ANDROID", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  pm list packages [-3|-s]    pm path <pkg>", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  logcat    dumpsys [service]    settings", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  am start    service list    input text", TerminalLine.Type.OUTPUT))
+
+        sec("DISPOSITIVO ANDROID")
+        cmd("battery  device  wifi  volume  sensor")
+        cmd("clip  copy <txt>  vibrate [ms]  notify <title> <msg>")
+        cmd("share <txt>  torch on|off  tts <texto>  open <url>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("REDE", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  ifconfig    ping    netstat    curl    wget", TerminalLine.Type.OUTPUT))
+
+        sec("SISTEMA")
+        cmd("neofetch  uname  whoami  id  hostname  date  uptime")
+        cmd("free  df  ps  top  lscpu  lsblk  mount  getprop")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("SHELL", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  echo    history [-c]    alias    export", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  env    unset    which    man    clear    exit", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  chmod    sort    grep    sed    awk    base64", TerminalLine.Type.OUTPUT))
+
+        sec("ANDROID NATIVO")
+        cmd("pm list packages [-3|-s]   logcat   dumpsys [svc]")
+        cmd("am start   service list   settings   input text")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("DIVERSÃO", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("  neofetch    banner <text>    cowsay <text>", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  matrix    fortune    sl    rev", TerminalLine.Type.OUTPUT))
+
+        sec("REDE")
+        cmd("ping  ifconfig  ip  netstat  dns  port  speedtest")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  Dica: use 'man <cmd>' para detalhes de cada comando.", TerminalLine.Type.SYSTEM))
+
+        sec("SHELL")
+        cmd("echo  history [-c]  alias  export  env  which  man")
+        cmd("env  unset  clear  exit  awk  sed  tr  cut  xargs")
+        cmd("Pipes e redirects suportados:  cmd1 | cmd2 > file")
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+
+        sec("DIVERSÃO")
+        cmd("neofetch  banner <txt>  cowsay <txt>  matrix")
+        cmd("fortune  sl  rev")
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        lines.add(TerminalLine("  'man <cmd>' para detalhes  •  TAB para completar", TerminalLine.Type.SYSTEM))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         return Result(lines)
     }

@@ -44,14 +44,21 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private fun addWelcome() {
         val welcome = listOf(
             TerminalLine("", TerminalLine.Type.OUTPUT),
-            TerminalLine("  ┌─────────────────────────────────────────┐", TerminalLine.Type.SUCCESS),
-            TerminalLine("  │         LayerDroid Terminal v1.0        │", TerminalLine.Type.SUCCESS),
-            TerminalLine("  │      Terminal Android avançado          │", TerminalLine.Type.SUCCESS),
-            TerminalLine("  └─────────────────────────────────────────┘", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ╔══════════════════════════════════════╗", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ║                                      ║", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ║   >_ LayerDroid Terminal  v1.0       ║", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ║      Terminal Android — Powered Up   ║", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ║                                      ║", TerminalLine.Type.SUCCESS),
+            TerminalLine("  ╚══════════════════════════════════════╝", TerminalLine.Type.SUCCESS),
             TerminalLine("", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Digite 'help' para ver os comandos disponíveis.", TerminalLine.Type.INFO),
-            TerminalLine("  Digite 'neofetch' para informações do sistema.", TerminalLine.Type.INFO),
-            TerminalLine("  Digite 'nano <arquivo>' para abrir o editor.", TerminalLine.Type.INFO),
+            TerminalLine("  • 'help'            → listar todos os comandos", TerminalLine.Type.INFO),
+            TerminalLine("  • 'neofetch'        → informações do sistema", TerminalLine.Type.INFO),
+            TerminalLine("  • 'http GET <url>'  → requisições HTTP reais", TerminalLine.Type.INFO),
+            TerminalLine("  • 'nano <arquivo>'  → editor de texto", TerminalLine.Type.INFO),
+            TerminalLine("  • 'calc sqrt(16)'   → calculadora avançada", TerminalLine.Type.INFO),
+            TerminalLine("  • 'termux-info'     → integração com Termux", TerminalLine.Type.INFO),
+            TerminalLine("", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Pipes: ls | grep foo   Redirects: cmd > file", TerminalLine.Type.SYSTEM),
             TerminalLine("", TerminalLine.Type.OUTPUT)
         )
         _lines.value = welcome
@@ -135,7 +142,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun getCommandCompletions(partial: String): List<String> {
-        val builtins = listOf("help","clear","echo","pwd","cd","ls","ll","la","cat","mkdir","rm",
+        val builtins = listOf(
+            "help","clear","echo","pwd","cd","ls","ll","la","cat","mkdir","rm",
             "rmdir","touch","cp","mv","find","grep","head","tail","wc","stat","file","tree",
             "date","uname","whoami","id","hostname","uptime","free","df","ps","top","lscpu",
             "lsblk","mount","neofetch","getprop","pm","am","logcat","dumpsys","settings","service",
@@ -145,8 +153,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             "md5sum","sha256sum","exit","quit",
             "nano","vi","vim","edit","view","less","more",
             "pkg",
-            "weather","wttr","myip","ipinfo","gh","gh-repo","tldr","define","joke","catfact","fact","coin","qr",
-            "battery","clip","copy","paste","vibrate","notify","share","torch","tts","volume","wifi","device")
+            "weather","wttr","myip","ipinfo","gh","gh-repo","tldr","define","joke","catfact","fact",
+            "coin","crypto","qr","http","fetch","dns","nslookup","dig","port","speedtest",
+            "hash","encode","decode","jq","calc","math","open","browse",
+            "python","python3","node","nodejs","php","ruby","lua","git","ssh","termux-info",
+            "battery","clip","copy","paste","vibrate","notify","share","torch","tts","volume","wifi","device"
+        )
         return builtins.filter { it.startsWith(partial) }
     }
 

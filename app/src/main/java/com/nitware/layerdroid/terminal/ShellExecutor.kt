@@ -16,15 +16,18 @@ class ShellExecutor {
     suspend fun execute(
         command: String,
         workingDir: File,
-        timeoutMs: Long = 10_000L
+        timeoutMs: Long = 10_000L,
+        envVars: Map<String, String> = emptyMap()
     ): Result = withContext(Dispatchers.IO) {
         val result = withTimeoutOrNull(timeoutMs) {
             try {
-                val process = ProcessBuilder("/system/bin/sh", "-c", command)
+                val pb = ProcessBuilder("/system/bin/sh", "-c", command)
                     .directory(workingDir)
                     .redirectErrorStream(false)
-                    .start()
-
+                if (envVars.isNotEmpty()) {
+                    pb.environment().putAll(envVars)
+                }
+                val process = pb.start()
                 val stdout = process.inputStream.bufferedReader().readText()
                 val stderr = process.errorStream.bufferedReader().readText()
                 process.waitFor()
@@ -39,9 +42,10 @@ class ShellExecutor {
     suspend fun executeLines(
         command: String,
         workingDir: File,
-        timeoutMs: Long = 10_000L
+        timeoutMs: Long = 10_000L,
+        envVars: Map<String, String> = emptyMap()
     ): List<TerminalLine> {
-        val result = execute(command, workingDir, timeoutMs)
+        val result = execute(command, workingDir, timeoutMs, envVars)
         val lines = mutableListOf<TerminalLine>()
         if (result.stdout.isNotEmpty()) {
             result.stdout.lines().forEach { lines.add(TerminalLine(it, TerminalLine.Type.OUTPUT)) }

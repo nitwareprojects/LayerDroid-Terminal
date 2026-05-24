@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -65,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.apply {
             title = "LayerDroid Terminal"
             setTitleTextColor(Color.parseColor("#56D364"))
-            setBackgroundColor(Color.parseColor("#0D1A0D"))
+            setBackgroundColor(Color.parseColor("#161B22"))
             inflateMenu(R.menu.terminal_menu)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -102,21 +103,26 @@ class MainActivity : AppCompatActivity() {
                 text = label
                 textSize = 12f
                 setTextColor(Color.parseColor("#C9D1D9"))
-                setBackgroundColor(Color.parseColor("#21262D"))
-                val pad = dpToPx(8)
-                val hPad = dpToPx(12)
-                setPadding(hPad, pad, hPad, pad)
                 isAllCaps = false
                 stateListAnimator = null
-
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(5).toFloat()
+                    setColor(Color.parseColor("#21262D"))
+                    setStroke(1, Color.parseColor("#30363D"))
+                }
+                val vPad = dpToPx(6)
+                val hPad = dpToPx(10)
+                setPadding(hPad, vPad, hPad, vPad)
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginEnd = dpToPx(4)
+                    marginEnd = dpToPx(5)
+                    topMargin = dpToPx(3)
+                    bottomMargin = dpToPx(3)
                 }
                 layoutParams = params
-
                 setOnClickListener { handleSpecialKey(action) }
             }
             container.addView(btn)
@@ -220,11 +226,13 @@ class MainActivity : AppCompatActivity() {
         val ctrlIdx = SPECIAL_KEYS.indexOfFirst { it.first == "CTRL" }
         val altIdx  = SPECIAL_KEYS.indexOfFirst { it.first == "ALT" }
         fun setActive(idx: Int, active: Boolean) {
-            (binding.specialKeysContainer.getChildAt(idx) as? Button)?.apply {
-                setBackgroundColor(
-                    if (active) Color.parseColor("#1F6FEB") else Color.parseColor("#21262D")
-                )
-            }
+            (binding.specialKeysContainer.getChildAt(idx) as? Button)?.background =
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(5).toFloat()
+                    setColor(if (active) Color.parseColor("#1F6FEB") else Color.parseColor("#21262D"))
+                    setStroke(1, if (active) Color.parseColor("#58A6FF") else Color.parseColor("#30363D"))
+                }
         }
         setActive(ctrlIdx, ctrlActive)
         setActive(altIdx, altActive)
@@ -251,7 +259,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnSend.apply {
-            setBackgroundColor(Color.parseColor("#238636"))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(6).toFloat()
+                setColor(Color.parseColor("#238636"))
+            }
             setTextColor(Color.WHITE)
             setOnClickListener { submitCommand() }
         }
