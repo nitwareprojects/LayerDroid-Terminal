@@ -5,7 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.Button
@@ -170,6 +174,34 @@ class NanoActivity : AppCompatActivity() {
             return
         }
         val f = file ?: return
+
+        // On Android 11+ external storage requires MANAGE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            f.absolutePath.startsWith(Environment.getExternalStorageDirectory().absolutePath) &&
+            !Environment.isExternalStorageManager()) {
+            AlertDialog.Builder(this)
+                .setTitle("Storage Permission Required")
+                .setMessage(
+                    "To save files on /sdcard, LayerDroid needs the " +
+                    "'All Files Access' permission.\n\n" +
+                    "Go to Settings → Apps → LayerDroid → Permissions → Files and Media → " +
+                    "Allow management of all files."
+                )
+                .setPositiveButton("Open Settings") { _, _ ->
+                    pendingSaveAfterPermission = true
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:$packageName"))
+                    startActivity(intent)
+                }
+                .setNegativeButton("Save Internally") { _, _ -> saveToInternalFallback() }
+                .show()
+            return
+        }
+
+        writeFile(f)
+    }
+
+    private fun writeFile(f: File) {
         try {
             val content = binding.etEditor.text.toString()
             f.parentFile?.mkdirs()
@@ -178,10 +210,19 @@ class NanoActivity : AppCompatActivity() {
             updateTitle()
             updateStatus()
             showStatus("Wrote ${countLines(content)} line(s) to ${f.name}")
-            Toast.makeText(this, "Saved: ${f.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Saved: ${f.absolutePath}", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Save error: ${e.message}", Toast.LENGTH_LONG).show()
+            showStatus("Save error: ${e.message}")
+            Toast.makeText(this, "Save failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun saveToInternalFallback() {
+        val f = file ?: return
+        val internal = File(filesDir, f.name)
+        file = internal
+        writeFile(internal)
+        showStatus("Saved internally: ${internal.absolutePath}")
     }
 
     private fun cutLine() {
@@ -322,6 +363,16 @@ class NanoActivity : AppCompatActivity() {
             .setNegativeButton("Discard") { _, _ -> finish() }
             .setNeutralButton("Cancel", null)
             .show()
+    }
+
+    private var pendingSaveAfterPermission = false
+
+    override fun onResume() {
+        super.onResume()
+        if (pendingSaveAfterPermission) {
+            pendingSaveAfterPermission = false
+            saveFile()
+        }
     }
 
     @Suppress("DEPRECATION")
