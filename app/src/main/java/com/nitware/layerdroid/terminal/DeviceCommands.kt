@@ -27,19 +27,19 @@ object DeviceCommands {
         val charging = bm.isCharging
         val status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
         val statusStr = when (status) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> "carregando"
-            BatteryManager.BATTERY_STATUS_DISCHARGING -> "descarregando"
-            BatteryManager.BATTERY_STATUS_FULL -> "cheia"
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "não carregando"
-            else -> "desconhecido"
+            BatteryManager.BATTERY_STATUS_CHARGING -> "charging"
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> "discharging"
+            BatteryManager.BATTERY_STATUS_FULL -> "full"
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "not charging"
+            else -> "unknown"
         }
         val bar = buildBar(level)
         return listOf(
-            TerminalLine("Bateria", TerminalLine.Type.SUCCESS),
-            TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
-            TerminalLine("  Nível:    $level%  $bar", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Status:   $statusStr ${if (charging) "⚡" else ""}", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Corrente: ${current}mA", TerminalLine.Type.OUTPUT)
+            TerminalLine("Battery", TerminalLine.Type.SUCCESS),
+            TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM),
+            TerminalLine("  Level:   $level%  $bar", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Status:  $statusStr ${if (charging) "[charging]" else ""}", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Current: ${current}mA", TerminalLine.Type.OUTPUT)
         )
     }
 
@@ -47,7 +47,7 @@ object DeviceCommands {
         return try {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val text = cm.primaryClip?.getItemAt(0)?.text?.toString()
-            if (text.isNullOrEmpty()) listOf(TerminalLine("(clipboard vazio)", TerminalLine.Type.WARNING))
+            if (text.isNullOrEmpty()) listOf(TerminalLine("(clipboard empty)", TerminalLine.Type.WARNING))
             else listOf(TerminalLine(text, TerminalLine.Type.OUTPUT))
         } catch (e: Exception) {
             listOf(TerminalLine("clip: ${e.message}", TerminalLine.Type.ERROR))
@@ -56,11 +56,11 @@ object DeviceCommands {
 
     fun clipboardSet(context: Context, args: List<String>): List<TerminalLine> {
         val text = args.joinToString(" ")
-        if (text.isEmpty()) return listOf(TerminalLine("Usage: copy <texto>", TerminalLine.Type.WARNING))
+        if (text.isEmpty()) return listOf(TerminalLine("Usage: copy <text>", TerminalLine.Type.WARNING))
         return try {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("LayerDroid", text))
-            listOf(TerminalLine("✓ Copiado ${text.length} caractere(s)", TerminalLine.Type.SUCCESS))
+            listOf(TerminalLine("Copied ${text.length} character(s)", TerminalLine.Type.SUCCESS))
         } catch (e: Exception) {
             listOf(TerminalLine("copy: ${e.message}", TerminalLine.Type.ERROR))
         }
@@ -81,16 +81,16 @@ object DeviceCommands {
             } else {
                 vibrator.vibrate(durMs)
             }
-            listOf(TerminalLine("✓ Vibrou por ${durMs}ms", TerminalLine.Type.SUCCESS))
+            listOf(TerminalLine("Vibrated for ${durMs}ms", TerminalLine.Type.SUCCESS))
         } catch (e: Exception) {
             listOf(TerminalLine("vibrate: ${e.message}", TerminalLine.Type.ERROR))
         }
     }
 
     fun notify(context: Context, args: List<String>): List<TerminalLine> {
-        if (args.isEmpty()) return listOf(TerminalLine("Usage: notify <título> [mensagem...]", TerminalLine.Type.WARNING))
+        if (args.isEmpty()) return listOf(TerminalLine("Usage: notify <title> [message...]", TerminalLine.Type.WARNING))
         val title = args[0]
-        val msg = args.drop(1).joinToString(" ").ifEmpty { "(sem mensagem)" }
+        val msg = args.drop(1).joinToString(" ").ifEmpty { "(no message)" }
         return try {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channelId = "layerdroid_notify"
@@ -105,9 +105,9 @@ object DeviceCommands {
                 .setAutoCancel(true)
                 .build()
             nm.notify(System.currentTimeMillis().toInt(), notif)
-            listOf(TerminalLine("✓ Notificação enviada: $title", TerminalLine.Type.SUCCESS))
+            listOf(TerminalLine("Notification sent: $title", TerminalLine.Type.SUCCESS))
         } catch (e: SecurityException) {
-            listOf(TerminalLine("notify: permissão POST_NOTIFICATIONS negada (Android 13+).", TerminalLine.Type.ERROR))
+            listOf(TerminalLine("notify: POST_NOTIFICATIONS permission denied (Android 13+)", TerminalLine.Type.ERROR))
         } catch (e: Exception) {
             listOf(TerminalLine("notify: ${e.message}", TerminalLine.Type.ERROR))
         }
@@ -115,17 +115,17 @@ object DeviceCommands {
 
     fun share(context: Context, args: List<String>): Pair<List<TerminalLine>, Intent?> {
         val text = args.joinToString(" ")
-        if (text.isEmpty()) return Pair(listOf(TerminalLine("Usage: share <texto>", TerminalLine.Type.WARNING)), null)
+        if (text.isEmpty()) return Pair(listOf(TerminalLine("Usage: share <text>", TerminalLine.Type.WARNING)), null)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val chooser = Intent.createChooser(intent, "Compartilhar via").apply {
+        val chooser = Intent.createChooser(intent, "Share via").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return Pair(
-            listOf(TerminalLine("✓ Abrindo diálogo de compartilhamento...", TerminalLine.Type.SUCCESS)),
+            listOf(TerminalLine("Opening share dialog...", TerminalLine.Type.SUCCESS)),
             chooser
         )
     }
@@ -140,11 +140,11 @@ object DeviceCommands {
             val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             val id = cm.cameraIdList.firstOrNull { cm.getCameraCharacteristics(it).get(
                 android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true }
-                ?: return listOf(TerminalLine("torch: dispositivo sem lanterna", TerminalLine.Type.ERROR))
+                ?: return listOf(TerminalLine("torch: no flashlight on this device", TerminalLine.Type.ERROR))
             cm.setTorchMode(id, on)
-            listOf(TerminalLine("✓ Lanterna ${if (on) "ligada" else "desligada"}", TerminalLine.Type.SUCCESS))
+            listOf(TerminalLine("Flashlight ${if (on) "on" else "off"}", TerminalLine.Type.SUCCESS))
         } catch (e: SecurityException) {
-            listOf(TerminalLine("torch: permissão de câmera negada.", TerminalLine.Type.ERROR))
+            listOf(TerminalLine("torch: camera permission denied", TerminalLine.Type.ERROR))
         } catch (e: Exception) {
             listOf(TerminalLine("torch: ${e.message}", TerminalLine.Type.ERROR))
         }
@@ -154,7 +154,7 @@ object DeviceCommands {
 
     fun ttsSpeak(context: Context, args: List<String>): List<TerminalLine> {
         val text = args.joinToString(" ")
-        if (text.isEmpty()) return listOf(TerminalLine("Usage: tts <texto>", TerminalLine.Type.WARNING))
+        if (text.isEmpty()) return listOf(TerminalLine("Usage: tts <text>", TerminalLine.Type.WARNING))
         return try {
             if (tts == null) {
                 tts = TextToSpeech(context.applicationContext) { status ->
@@ -181,13 +181,13 @@ object DeviceCommands {
         }
         return listOf(
             TerminalLine("Volume", TerminalLine.Type.SUCCESS),
-            TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
-            row("Mídia",    AudioManager.STREAM_MUSIC),
-            row("Toque",    AudioManager.STREAM_RING),
+            TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM),
+            row("Media",    AudioManager.STREAM_MUSIC),
+            row("Ring",     AudioManager.STREAM_RING),
             row("Notif.",   AudioManager.STREAM_NOTIFICATION),
-            row("Alarme",   AudioManager.STREAM_ALARM),
-            row("Chamada",  AudioManager.STREAM_VOICE_CALL),
-            row("Sistema",  AudioManager.STREAM_SYSTEM)
+            row("Alarm",    AudioManager.STREAM_ALARM),
+            row("Call",     AudioManager.STREAM_VOICE_CALL),
+            row("System",   AudioManager.STREAM_SYSTEM)
         )
     }
 
@@ -200,27 +200,27 @@ object DeviceCommands {
             val ip = "${ipInt and 0xff}.${ipInt shr 8 and 0xff}.${ipInt shr 16 and 0xff}.${ipInt shr 24 and 0xff}"
             listOf(
                 TerminalLine("Wi-Fi", TerminalLine.Type.SUCCESS),
-                TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
+                TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM),
                 TerminalLine("  SSID:      ${info.ssid}", TerminalLine.Type.OUTPUT),
                 TerminalLine("  BSSID:     ${info.bssid}", TerminalLine.Type.OUTPUT),
-                TerminalLine("  IP local:  $ip", TerminalLine.Type.OUTPUT),
+                TerminalLine("  Local IP:  $ip", TerminalLine.Type.OUTPUT),
                 TerminalLine("  Link:      ${info.linkSpeed} Mbps", TerminalLine.Type.OUTPUT),
                 TerminalLine("  RSSI:      ${info.rssi} dBm", TerminalLine.Type.OUTPUT)
             )
         } catch (e: Exception) {
-            listOf(TerminalLine("wifi: ${e.message} (geralmente exige ACCESS_FINE_LOCATION)", TerminalLine.Type.ERROR))
+            listOf(TerminalLine("wifi: ${e.message} (usually requires ACCESS_FINE_LOCATION)", TerminalLine.Type.ERROR))
         }
     }
 
     fun deviceInfo(context: Context): List<TerminalLine> {
         return listOf(
-            TerminalLine("Dispositivo", TerminalLine.Type.SUCCESS),
-            TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
-            TerminalLine("  Marca:       ${Build.BRAND}", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Modelo:      ${Build.MODEL}", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Fabricante:  ${Build.MANUFACTURER}", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Produto:     ${Build.PRODUCT}", TerminalLine.Type.OUTPUT),
-            TerminalLine("  Placa:       ${Build.BOARD}", TerminalLine.Type.OUTPUT),
+            TerminalLine("Device", TerminalLine.Type.SUCCESS),
+            TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM),
+            TerminalLine("  Brand:       ${Build.BRAND}", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Model:       ${Build.MODEL}", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Manufacturer:${Build.MANUFACTURER}", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Product:     ${Build.PRODUCT}", TerminalLine.Type.OUTPUT),
+            TerminalLine("  Board:       ${Build.BOARD}", TerminalLine.Type.OUTPUT),
             TerminalLine("  Hardware:    ${Build.HARDWARE}", TerminalLine.Type.OUTPUT),
             TerminalLine("  Android:     ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})", TerminalLine.Type.OUTPUT),
             TerminalLine("  ABIs:        ${Build.SUPPORTED_ABIS.joinToString(", ")}", TerminalLine.Type.OUTPUT),

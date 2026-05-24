@@ -80,7 +80,7 @@ class CommandProcessor(private val context: Context) {
         return when (cmd) {
             "help", "?" -> cmdHelp(args)
             "clear", "cls" -> Result(emptyList(), shouldClear = true)
-            "exit", "quit", "q" -> Result(listOf(TerminalLine("Saindo...", TerminalLine.Type.SYSTEM)), shouldExit = true)
+            "exit", "quit", "q" -> Result(listOf(TerminalLine("Exiting...", TerminalLine.Type.SYSTEM)), shouldExit = true)
             "echo" -> cmdEcho(args)
             "pwd" -> Result(listOf(TerminalLine(currentDir.absolutePath, TerminalLine.Type.OUTPUT)))
             "cd" -> cmdCd(args)
@@ -162,7 +162,7 @@ class CommandProcessor(private val context: Context) {
             "du" -> cmdDu(args)
             "kill" -> shell.executeLines("kill ${args.joinToString(" ")}", currentDir).let { Result(it) }
             "pkill" -> shell.executeLines("pkill ${args.joinToString(" ")}", currentDir).let { Result(it) }
-            "su" -> Result(listOf(TerminalLine("su: Permission denied (app não tem root)", TerminalLine.Type.ERROR)))
+            "su" -> Result(listOf(TerminalLine("su: Permission denied (app does not have root)", TerminalLine.Type.ERROR)))
             "nano", "vi", "vim", "edit" -> cmdNano(args, readOnly = false)
             "view", "less", "more" -> cmdNano(args, readOnly = true)
 
@@ -229,13 +229,13 @@ class CommandProcessor(private val context: Context) {
             "termux-info", "termux" -> cmdTermuxInfo()
 
             else -> {
-                // Tenta executar como script instalado via pkg
+                // Try to execute as an installed script via pkg
                 if (pkg.isInstalled(cmd)) {
                     Result(pkg.cmdRun(cmd, args, currentDir))
                 } else {
                     val result = shell.executeLines(expanded, currentDir)
                     if (result.isEmpty()) {
-                        Result(listOf(TerminalLine("$cmd: comando não encontrado. Digite 'help' para ver a lista.", TerminalLine.Type.ERROR)))
+                        Result(listOf(TerminalLine("$cmd: command not found. Type 'help' to see the list.", TerminalLine.Type.ERROR)))
                     } else {
                         Result(result)
                     }
@@ -267,8 +267,8 @@ class CommandProcessor(private val context: Context) {
             "setrepo"                     -> Result(pkg.cmdSetRepo(rest.joinToString(" ")))
             "help", "-h", "--help", "?"   -> Result(pkg.help())
             else                          -> Result(listOf(
-                TerminalLine("pkg: sub-comando desconhecido '$sub'", TerminalLine.Type.ERROR),
-                TerminalLine("Use 'pkg help' para ver os comandos disponíveis.", TerminalLine.Type.SYSTEM)
+                TerminalLine("pkg: unknown sub-command '$sub'", TerminalLine.Type.ERROR),
+                TerminalLine("Use 'pkg help' to see available commands.", TerminalLine.Type.SYSTEM)
             ))
         }
     }
@@ -912,25 +912,25 @@ class CommandProcessor(private val context: Context) {
         } catch (e: Exception) { "?" }
 
         val termuxStatus = if (hasTermux) "Termux:  ${File(TERMUX_BIN).listFiles()?.size ?: 0} pkgs"
-                           else "Termux:  não instalado"
+                           else "Termux:  not installed"
 
         val logo = listOf(
-            "  ╔══════════════════╗",
-            "  ╠══════════════════╣",
-            "  ║  ██    ████      ║",
-            "  ║  ██    ██  ██    ║",
-            "  ║  ██    ██  ██    ║",
-            "  ║  ██    ██  ██    ║",
-            "  ║  ████  ████      ║",
-            "  ╠══════════════════╣",
-            "  ║  >_ LayerDroid   ║",
-            "  ╠══════════════════╣",
-            "  ║  Android  v1.0   ║",
-            "  ╚══════════════════╝"
+            "  +--------------------+",
+            "  | >_ LayerDroid      |",
+            "  +--------------------+",
+            "  |  #   ####          |",
+            "  |  #   #  #          |",
+            "  |  #   #  #          |",
+            "  |  #   #  #          |",
+            "  |  #### ####         |",
+            "  +--------------------+",
+            "  |  Android Terminal  |",
+            "  +--------------------+",
+            "  |   > _  v 1 . 0     |"
         )
         val info = listOf(
             "user@$hostname",
-            "─".repeat("user@$hostname".length),
+            "-".repeat("user@$hostname".length),
             "OS:      Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             "Kernel:  $kernel",
             "Device:  ${Build.MANUFACTURER} ${Build.MODEL}",
@@ -940,34 +940,26 @@ class CommandProcessor(private val context: Context) {
             "Storage: $storageUsed / $storageTotal",
             "Battery: $battery",
             "Uptime:  $uptime",
+            "Shell:   LayerDroid Terminal v1.0",
             termuxStatus
         )
 
-        val lineTypes = listOf(
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.SUCCESS, TerminalLine.Type.SUCCESS
-        )
         val infoTypes = listOf(
             TerminalLine.Type.SUCCESS, TerminalLine.Type.SYSTEM,
             TerminalLine.Type.INFO,    TerminalLine.Type.OUTPUT,
             TerminalLine.Type.SUCCESS, TerminalLine.Type.OUTPUT,
             TerminalLine.Type.INFO,    TerminalLine.Type.WARNING,
             TerminalLine.Type.INFO,    TerminalLine.Type.SUCCESS,
-            TerminalLine.Type.OUTPUT,  TerminalLine.Type.INFO
+            TerminalLine.Type.OUTPUT,  TerminalLine.Type.OUTPUT,
+            TerminalLine.Type.INFO
         )
 
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        val maxRows = maxOf(logo.size, info.size)
-        for (i in 0 until maxRows) {
-            val l = logo.getOrElse(i) { "                      " }
-            val r = info.getOrElse(i) { "" }
-            val type = infoTypes.getOrElse(i) { TerminalLine.Type.OUTPUT }
-            lines.add(TerminalLine("$l  $r", type))
+        logo.forEach { lines.add(TerminalLine(it, TerminalLine.Type.SUCCESS)) }
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        info.forEachIndexed { i, r ->
+            lines.add(TerminalLine("  $r", infoTypes.getOrElse(i) { TerminalLine.Type.OUTPUT }))
         }
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         return Result(lines)
@@ -1157,7 +1149,7 @@ class CommandProcessor(private val context: Context) {
             val lines = mutableListOf<TerminalLine>()
             lines.add(TerminalLine("--  $url", TerminalLine.Type.INFO))
             val bytes = HttpClient.download(url, dest)
-            lines.add(TerminalLine("'${dest.name}' salvo [${bytes / 1024} KB]", TerminalLine.Type.SUCCESS))
+            lines.add(TerminalLine("'${dest.name}' saved [${bytes / 1024} KB]", TerminalLine.Type.SUCCESS))
             Result(lines)
         } catch (e: Exception) {
             Result(listOf(TerminalLine("wget: ${e.message}", TerminalLine.Type.ERROR)))
@@ -1301,10 +1293,10 @@ class CommandProcessor(private val context: Context) {
             "uname" to "uname [-a|-r|-m|-s|-n]\n  Print system information.",
             "alias" to "alias [name=value]\n  Create command aliases.",
             "export" to "export KEY=value\n  Set environment variables.",
-            "nano" to "nano <arquivo>\n  Abre o editor de texto.\n  ^O salvar, ^X sair, ^W buscar, ^_ ir para linha.",
-            "vi"   to "vi <arquivo>\n  Alias para nano.",
-            "edit" to "edit <arquivo>\n  Alias para nano.",
-            "view" to "view <arquivo>\n  Abre arquivo em modo somente leitura."
+            "nano" to "nano <file>\n  Open text editor.\n  ^O save, ^X exit, ^W search, ^_ go to line.",
+            "vi"   to "vi <file>\n  Alias for nano.",
+            "edit" to "edit <file>\n  Alias for nano.",
+            "view" to "view <file>\n  Open file in read-only mode."
         )
         val page = manPages[cmd] ?: return Result(listOf(TerminalLine("No manual entry for $cmd", TerminalLine.Type.ERROR)))
         val lines = mutableListOf(
@@ -1321,15 +1313,15 @@ class CommandProcessor(private val context: Context) {
 
     private fun cmdHash(args: List<String>): Result {
         val algo = args.firstOrNull()?.uppercase()
-            ?: return Result(listOf(TerminalLine("Usage: hash <md5|sha1|sha256|sha512> <texto>", TerminalLine.Type.WARNING)))
+            ?: return Result(listOf(TerminalLine("Usage: hash <md5|sha1|sha256|sha512> <text>", TerminalLine.Type.WARNING)))
         val text = args.drop(1).joinToString(" ")
-        if (text.isEmpty()) return Result(listOf(TerminalLine("hash: texto necessário", TerminalLine.Type.WARNING)))
+        if (text.isEmpty()) return Result(listOf(TerminalLine("hash: text required", TerminalLine.Type.WARNING)))
         val mdAlgo = when (algo) {
             "MD5"          -> "MD5"
             "SHA1", "SHA-1" -> "SHA-1"
             "SHA256", "SHA-256" -> "SHA-256"
             "SHA512", "SHA-512" -> "SHA-512"
-            else -> return Result(listOf(TerminalLine("hash: algoritmo inválido. Use: md5, sha1, sha256, sha512", TerminalLine.Type.ERROR)))
+            else -> return Result(listOf(TerminalLine("hash: invalid algorithm. Use: md5, sha1, sha256, sha512", TerminalLine.Type.ERROR)))
         }
         return try {
             val hash = MessageDigest.getInstance(mdAlgo).digest(text.toByteArray())
@@ -1344,9 +1336,9 @@ class CommandProcessor(private val context: Context) {
 
     private fun cmdEncode(args: List<String>): Result {
         val type = args.firstOrNull()?.lowercase()
-            ?: return Result(listOf(TerminalLine("Usage: encode <base64|url|hex> <texto>", TerminalLine.Type.WARNING)))
+            ?: return Result(listOf(TerminalLine("Usage: encode <base64|url|hex> <text>", TerminalLine.Type.WARNING)))
         val text = args.drop(1).joinToString(" ")
-        if (text.isEmpty()) return Result(listOf(TerminalLine("encode: texto necessário", TerminalLine.Type.WARNING)))
+        if (text.isEmpty()) return Result(listOf(TerminalLine("encode: text required", TerminalLine.Type.WARNING)))
         return when (type) {
             "base64", "b64" -> Result(listOf(TerminalLine(
                 Base64.encodeToString(text.toByteArray(), Base64.NO_WRAP), TerminalLine.Type.SUCCESS
@@ -1357,7 +1349,7 @@ class CommandProcessor(private val context: Context) {
             "hex" -> Result(listOf(TerminalLine(
                 text.toByteArray().joinToString("") { "%02x".format(it) }, TerminalLine.Type.SUCCESS
             )))
-            else -> Result(listOf(TerminalLine("encode: tipo inválido. Use: base64, url, hex", TerminalLine.Type.ERROR)))
+            else -> Result(listOf(TerminalLine("encode: invalid type. Use: base64, url, hex", TerminalLine.Type.ERROR)))
         }
     }
 
@@ -1365,19 +1357,19 @@ class CommandProcessor(private val context: Context) {
         val type = args.firstOrNull()?.lowercase()
             ?: return Result(listOf(TerminalLine("Usage: decode <base64|url|hex> <encoded>", TerminalLine.Type.WARNING)))
         val text = args.drop(1).joinToString(" ")
-        if (text.isEmpty()) return Result(listOf(TerminalLine("decode: texto necessário", TerminalLine.Type.WARNING)))
+        if (text.isEmpty()) return Result(listOf(TerminalLine("decode: text required", TerminalLine.Type.WARNING)))
         return when (type) {
             "base64", "b64" -> try {
                 Result(listOf(TerminalLine(String(Base64.decode(text, Base64.DEFAULT)), TerminalLine.Type.SUCCESS)))
-            } catch (_: Exception) { Result(listOf(TerminalLine("decode: base64 inválido", TerminalLine.Type.ERROR))) }
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: invalid base64", TerminalLine.Type.ERROR))) }
             "url" -> try {
                 Result(listOf(TerminalLine(URLDecoder.decode(text, "UTF-8"), TerminalLine.Type.SUCCESS)))
-            } catch (_: Exception) { Result(listOf(TerminalLine("decode: URL encoding inválido", TerminalLine.Type.ERROR))) }
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: invalid URL encoding", TerminalLine.Type.ERROR))) }
             "hex" -> try {
                 val bytes = text.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
                 Result(listOf(TerminalLine(String(bytes), TerminalLine.Type.SUCCESS)))
-            } catch (_: Exception) { Result(listOf(TerminalLine("decode: hex inválido", TerminalLine.Type.ERROR))) }
-            else -> Result(listOf(TerminalLine("decode: tipo inválido. Use: base64, url, hex", TerminalLine.Type.ERROR)))
+            } catch (_: Exception) { Result(listOf(TerminalLine("decode: invalid hex", TerminalLine.Type.ERROR))) }
+            else -> Result(listOf(TerminalLine("decode: invalid type. Use: base64, url, hex", TerminalLine.Type.ERROR)))
         }
     }
 
@@ -1387,12 +1379,12 @@ class CommandProcessor(private val context: Context) {
         val query = args.firstOrNull { it.startsWith(".") }
         val fileArg = args.lastOrNull { !it.startsWith(".") }
             ?: return Result(listOf(
-                TerminalLine("Usage: jq [.field] <arquivo.json>", TerminalLine.Type.WARNING),
+                TerminalLine("Usage: jq [.field] <file.json>", TerminalLine.Type.WARNING),
                 TerminalLine("  ex:  jq data.json", TerminalLine.Type.OUTPUT),
                 TerminalLine("  ex:  jq .name data.json", TerminalLine.Type.OUTPUT)
             ))
         val file = resolveFile(fileArg)
-        if (!file.exists()) return Result(listOf(TerminalLine("jq: $fileArg: arquivo não encontrado", TerminalLine.Type.ERROR)))
+        if (!file.exists()) return Result(listOf(TerminalLine("jq: $fileArg: file not found", TerminalLine.Type.ERROR)))
         return try {
             val content = file.readText().trim()
             val parsed: Any = if (content.startsWith("[")) JSONArray(content) else JSONObject(content)
@@ -1420,7 +1412,7 @@ class CommandProcessor(private val context: Context) {
     private fun cmdCalc(args: List<String>): Result {
         val expr = args.joinToString(" ").trim()
         if (expr.isEmpty()) return Result(listOf(
-            TerminalLine("Usage: calc <expressão>", TerminalLine.Type.WARNING),
+            TerminalLine("Usage: calc <expression>", TerminalLine.Type.WARNING),
             TerminalLine("  ex: calc 2+2   calc sqrt(16)   calc pi*2   calc 10^3", TerminalLine.Type.OUTPUT)
         ))
         return try {
@@ -1429,7 +1421,7 @@ class CommandProcessor(private val context: Context) {
                           else "%.10g".format(result).trimEnd('0').trimEnd('.')
             Result(listOf(TerminalLine("= $display", TerminalLine.Type.SUCCESS)))
         } catch (e: Exception) {
-            Result(listOf(TerminalLine("calc: expressão inválida — ${e.message}", TerminalLine.Type.ERROR)))
+            Result(listOf(TerminalLine("calc: invalid expression — ${e.message}", TerminalLine.Type.ERROR)))
         }
     }
 
@@ -1460,15 +1452,15 @@ class CommandProcessor(private val context: Context) {
                         "cos" -> Math.cos(a); "tan" -> Math.tan(a); "log" -> Math.log10(a)
                         "ln" -> Math.log(a); "floor" -> Math.floor(a); "ceil" -> Math.ceil(a)
                         "round" -> Math.round(a).toDouble(); "exp" -> Math.exp(a)
-                        else -> throw IllegalArgumentException("função desconhecida: $name")
+                        else -> throw IllegalArgumentException("unknown function: $name")
                     }
                 }
-                return when (name) { "pi" -> Math.PI; "e" -> Math.E; else -> throw IllegalArgumentException("constante desconhecida: $name") }
+                return when (name) { "pi" -> Math.PI; "e" -> Math.E; else -> throw IllegalArgumentException("unknown constant: $name") }
             }
             val start = p
             if (p < e.length && e[p] == '.') p++
             while (p < e.length && (e[p].isDigit() || e[p] == '.')) p++
-            if (p == start) throw IllegalArgumentException("número esperado na posição $p")
+            if (p == start) throw IllegalArgumentException("number expected at position $p")
             return e.substring(start, p).toDouble()
         }
     }
@@ -1480,7 +1472,7 @@ class CommandProcessor(private val context: Context) {
             ?: return Result(listOf(TerminalLine("Usage: open <url>", TerminalLine.Type.WARNING)))
         val url = if (!raw.startsWith("http")) "https://$raw" else raw
         return Result(
-            listOf(TerminalLine("Abrindo: $url", TerminalLine.Type.INFO)),
+            listOf(TerminalLine("Opening: $url", TerminalLine.Type.INFO)),
             launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         )
     }
@@ -1499,10 +1491,10 @@ class CommandProcessor(private val context: Context) {
         }
         val name = names.first()
         return Result(listOf(
-            TerminalLine("$name: não encontrado no sistema", TerminalLine.Type.ERROR),
-            TerminalLine("  Se o Termux estiver instalado: pkg install $name", TerminalLine.Type.INFO),
-            if (hasTermux) TerminalLine("  Termux detectado — execute: pkg install $name no Termux", TerminalLine.Type.WARNING)
-            else TerminalLine("  Instale o Termux para usar pacotes Linux reais", TerminalLine.Type.WARNING)
+            TerminalLine("$name: not found on this system", TerminalLine.Type.ERROR),
+            TerminalLine("  If Termux is installed: pkg install $name", TerminalLine.Type.INFO),
+            if (hasTermux) TerminalLine("  Termux detected — run: pkg install $name in Termux", TerminalLine.Type.WARNING)
+            else TerminalLine("  Install Termux to use real Linux packages", TerminalLine.Type.WARNING)
         ))
     }
 
@@ -1512,30 +1504,30 @@ class CommandProcessor(private val context: Context) {
         val result = shell.executeLines("ssh ${args.joinToString(" ")} 2>&1", currentDir, 30000L, envVars)
         if (result.isNotEmpty() && result.none { "not found" in it.text }) return Result(result)
         return Result(listOf(
-            TerminalLine("ssh: cliente SSH não encontrado", TerminalLine.Type.ERROR),
-            TerminalLine("  Instale o Termux e execute: pkg install openssh", TerminalLine.Type.INFO)
+            TerminalLine("ssh: SSH client not found", TerminalLine.Type.ERROR),
+            TerminalLine("  Install Termux and run: pkg install openssh", TerminalLine.Type.INFO)
         ))
     }
 
     private fun cmdTermuxInfo(): Result {
         val lines = mutableListOf<TerminalLine>()
-        lines.add(TerminalLine("Integração com Termux", TerminalLine.Type.INFO))
-        lines.add(TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM))
+        lines.add(TerminalLine("Termux Integration", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM))
         if (hasTermux) {
             val binDir = File(TERMUX_BIN)
             val pkgCount = binDir.listFiles()?.size ?: 0
-            lines.add(TerminalLine("Status:   Detectado e ativo", TerminalLine.Type.SUCCESS))
+            lines.add(TerminalLine("Status:   Detected and active", TerminalLine.Type.SUCCESS))
             lines.add(TerminalLine("Prefix:   $TERMUX_PREFIX", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("Binários: $pkgCount executáveis disponíveis", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("Binaries: $pkgCount executables available", TerminalLine.Type.OUTPUT))
             lines.add(TerminalLine("PATH:     ${envVars["PATH"]}", TerminalLine.Type.OUTPUT))
             lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("Binários do Termux disponíveis nesta sessão.", TerminalLine.Type.SUCCESS))
+            lines.add(TerminalLine("Termux binaries available in this session.", TerminalLine.Type.SUCCESS))
         } else {
-            lines.add(TerminalLine("Status:   Não detectado", TerminalLine.Type.WARNING))
-            lines.add(TerminalLine("Instale o Termux (F-Droid ou Play Store) para:", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  • Python, Node.js, Ruby, PHP", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  • Git, SSH, curl, wget nativos", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  • 1000+ pacotes Linux", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("Status:   Not detected", TerminalLine.Type.WARNING))
+            lines.add(TerminalLine("Install Termux (F-Droid or Play Store) to get:", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  * Python, Node.js, Ruby, PHP", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  * Git, SSH, curl, wget (native)", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("  * 1000+ Linux packages", TerminalLine.Type.OUTPUT))
         }
         return Result(lines)
     }
@@ -1544,84 +1536,84 @@ class CommandProcessor(private val context: Context) {
         if (args.isNotEmpty()) return cmdMan(args)
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  ╔══════════════════════════════════════╗", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("  ║    LayerDroid Terminal  v1.0         ║", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("  ║    Terminal Android — Powered Up     ║", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("  ╚══════════════════════════════════════╝", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  +--------------------------------------+", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  |    LayerDroid Terminal  v1.0         |", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  |    Advanced Android Terminal         |", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  +--------------------------------------+", TerminalLine.Type.SUCCESS))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         fun sec(title: String) { lines.add(TerminalLine("  $title", TerminalLine.Type.INFO)) }
         fun cmd(text: String) { lines.add(TerminalLine("    $text", TerminalLine.Type.OUTPUT)) }
 
-        sec("ARQUIVOS & NAVEGAÇÃO")
+        sec("FILES & NAVIGATION")
         cmd("ls [-la]  ll  la  cd  pwd  tree  stat  file  du")
         cmd("cat  mkdir  rm [-rf]  touch  cp  mv  chmod  ln")
         cmd("grep [-inv]  head  tail  wc  find  sort  uniq")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("EDITOR DE TEXTO")
-        cmd("nano <file>  vi  vim  edit  view (somente leitura)")
+        sec("TEXT EDITOR")
+        cmd("nano <file>  vi  vim  edit  view (read-only)")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("INTERNET & HTTP")
         cmd("http [GET|POST] <url> [Header:V] [key=val]")
         cmd("curl <url>    wget <url>")
-        cmd("weather [cidade]   myip   ipinfo [ip]   speedtest")
+        cmd("weather [city]   myip   ipinfo [ip]   speedtest")
         cmd("dns <host>   port <host> <port>")
         cmd("gh <user>   gh-repo <owner/repo>   tldr <cmd>")
         cmd("define <word>   joke   catfact   fact")
-        cmd("coin [btc,eth,sol]   qr <texto>")
+        cmd("coin [btc,eth,sol]   qr <text>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("CRYPTO / ENCODING")
-        cmd("hash <md5|sha1|sha256|sha512> <texto>")
-        cmd("encode <base64|url|hex> <texto>")
+        cmd("hash <md5|sha1|sha256|sha512> <text>")
+        cmd("encode <base64|url|hex> <text>")
         cmd("decode <base64|url|hex> <encoded>")
-        cmd("jq [.field] <arquivo.json>")
+        cmd("jq [.field] <file.json>")
         cmd("calc <expr>   ex: calc sqrt(16)*pi")
         cmd("base64  md5sum  sha256sum")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("PACOTES (pkg help para detalhes)")
+        sec("PACKAGES (pkg help for details)")
         cmd("pkg update   pkg list   pkg available   pkg search <q>")
-        cmd("pkg install <nome>   pkg remove <nome>   pkg run <nome>")
+        cmd("pkg install <name>   pkg remove <name>   pkg run <name>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("RUNTIMES (requer Termux)")
+        sec("RUNTIMES (requires Termux)")
         cmd("python3 [script]   node [script]   php   ruby   lua")
         cmd("git <cmd>   ssh [user@]host   termux-info")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("DISPOSITIVO ANDROID")
+        sec("ANDROID DEVICE")
         cmd("battery  device  wifi  volume  sensor")
         cmd("clip  copy <txt>  vibrate [ms]  notify <title> <msg>")
-        cmd("share <txt>  torch on|off  tts <texto>  open <url>")
+        cmd("share <txt>  torch on|off  tts <text>  open <url>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("SISTEMA")
+        sec("SYSTEM")
         cmd("neofetch  uname  whoami  id  hostname  date  uptime")
         cmd("free  df  ps  top  lscpu  lsblk  mount  getprop")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("ANDROID NATIVO")
+        sec("NATIVE ANDROID")
         cmd("pm list packages [-3|-s]   logcat   dumpsys [svc]")
         cmd("am start   service list   settings   input text")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("REDE")
+        sec("NETWORK")
         cmd("ping  ifconfig  ip  netstat  dns  port  speedtest")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("SHELL")
         cmd("echo  history [-c]  alias  export  env  which  man")
         cmd("env  unset  clear  exit  awk  sed  tr  cut  xargs")
-        cmd("Pipes e redirects suportados:  cmd1 | cmd2 > file")
+        cmd("Pipes and redirects supported:  cmd1 | cmd2 > file")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
-        sec("DIVERSÃO")
+        sec("FUN")
         cmd("neofetch  banner <txt>  cowsay <txt>  matrix")
         cmd("fortune  sl  rev")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        lines.add(TerminalLine("  'man <cmd>' para detalhes  •  TAB para completar", TerminalLine.Type.SYSTEM))
+        lines.add(TerminalLine("  'man <cmd>' for details  •  TAB to complete", TerminalLine.Type.SYSTEM))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         return Result(lines)
     }
@@ -1706,7 +1698,7 @@ class CommandProcessor(private val context: Context) {
             "\"The computer was born to solve problems that did not exist before.\" – Bill Gates",
             "\"Walking on water and developing software from a specification are easy if both are frozen.\" – Edward V. Berard",
             "\"Always code as if the guy who ends up maintaining your code will be a violent psychopath who knows where you live.\" – Martin Golding",
-            "\"rm -rf /: não tente isso em casa.\" – Sysadmin anônimo",
+            "\"rm -rf /: don't try this at home.\" – Anonymous sysadmin",
             "\"99 little bugs in the code. 99 little bugs. Take one down, patch it around... 127 little bugs in the code.\" – Anonymous"
         )
         return Result(listOf(
@@ -1762,16 +1754,16 @@ class CommandProcessor(private val context: Context) {
     private fun cmdNano(args: List<String>, readOnly: Boolean): Result {
         val filename = args.firstOrNull { !it.startsWith("-") }
             ?: return Result(listOf(
-                TerminalLine("Usage: nano <arquivo>", TerminalLine.Type.WARNING),
-                TerminalLine("       vi <arquivo>", TerminalLine.Type.WARNING),
-                TerminalLine("       view <arquivo>  (somente leitura)", TerminalLine.Type.WARNING)
+                TerminalLine("Usage: nano <file>", TerminalLine.Type.WARNING),
+                TerminalLine("       vi <file>", TerminalLine.Type.WARNING),
+                TerminalLine("       view <file>  (read-only)", TerminalLine.Type.WARNING)
             ))
         val file = resolveFile(filename)
         if (file.isDirectory) {
-            return Result(listOf(TerminalLine("nano: ${filename}: é um diretório", TerminalLine.Type.ERROR)))
+            return Result(listOf(TerminalLine("nano: ${filename}: is a directory", TerminalLine.Type.ERROR)))
         }
         val intent = NanoActivity.newIntent(context, file.absolutePath, readOnly)
-        val msg = if (file.exists()) "Abrindo ${file.name}..." else "Criando ${file.name}..."
+        val msg = if (file.exists()) "Opening ${file.name}..." else "Creating ${file.name}..."
         return Result(
             lines = listOf(TerminalLine(msg, TerminalLine.Type.INFO)),
             launchIntent = intent

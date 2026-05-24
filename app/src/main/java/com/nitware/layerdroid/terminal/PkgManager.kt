@@ -8,7 +8,7 @@ class PkgManager(private val context: Context) {
 
     companion object {
         const val DEFAULT_REPO_URL =
-            "https://raw.githubusercontent.com/nitwareprojects/layerdroid-pkg/main/manifest.json"
+            "https://raw.githubusercontent.com/nitwareprojects/layerdroid-terminal/main/app/src/main/assets/pkg-core.json"
         private const val BUNDLED_ASSET = "pkg-core.json"
     }
 
@@ -29,18 +29,27 @@ class PkgManager(private val context: Context) {
 
     suspend fun cmdUpdate(): List<TerminalLine> {
         val lines = mutableListOf<TerminalLine>()
-        lines.add(TerminalLine("↓ Atualizando manifest de $repoUrl ...", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("Updating manifest from $repoUrl ...", TerminalLine.Type.INFO))
         return try {
             val text = HttpClient.get(repoUrl, timeoutMs = 8000)
             JSONObject(text)
             manifestCacheFile.writeText(text)
             val manifest = JSONObject(text)
             val count = manifest.optJSONArray("scripts")?.length() ?: 0
-            lines.add(TerminalLine("✓ Manifest atualizado: ${manifest.optString("repo")} (${count} scripts)", TerminalLine.Type.SUCCESS))
+            lines.add(TerminalLine("Manifest updated: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
             lines
         } catch (e: Exception) {
-            lines.add(TerminalLine("✗ Falha ao baixar manifest: ${e.message}", TerminalLine.Type.ERROR))
-            lines.add(TerminalLine("  Usando manifest embutido (pkg-core).", TerminalLine.Type.WARNING))
+            lines.add(TerminalLine("Warning: could not fetch remote manifest: ${e.message}", TerminalLine.Type.WARNING))
+            lines.add(TerminalLine("  Falling back to bundled pkg-core manifest...", TerminalLine.Type.WARNING))
+            try {
+                val bundled = context.assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
+                val manifest = JSONObject(bundled)
+                manifestCacheFile.writeText(bundled)
+                val count = manifest.optJSONArray("scripts")?.length() ?: 0
+                lines.add(TerminalLine("Loaded bundled manifest: ${manifest.optString("repo")} ($count scripts)", TerminalLine.Type.SUCCESS))
+            } catch (ex: Exception) {
+                lines.add(TerminalLine("  Could not load bundled manifest: ${ex.message}", TerminalLine.Type.WARNING))
+            }
             lines
         }
     }
@@ -51,35 +60,35 @@ class PkgManager(private val context: Context) {
             ?: emptyList()
         if (installed.isEmpty()) {
             return listOf(
-                TerminalLine("Nenhum script instalado.", TerminalLine.Type.WARNING),
-                TerminalLine("Use 'pkg available' para listar pacotes do repositório.", TerminalLine.Type.SYSTEM)
+                TerminalLine("No scripts installed.", TerminalLine.Type.WARNING),
+                TerminalLine("Use 'pkg available' to list packages from the repository.", TerminalLine.Type.SYSTEM)
             )
         }
         val manifest = loadManifest()
         val byName = manifest.scriptIndex()
         val out = mutableListOf<TerminalLine>(
-            TerminalLine("Scripts instalados (${installed.size}):", TerminalLine.Type.INFO)
+            TerminalLine("Installed scripts (${installed.size}):", TerminalLine.Type.INFO)
         )
         installed.forEach { f ->
             val name = f.nameWithoutExtension
             val meta = byName[name]
             val ver = meta?.optString("version", "?") ?: "local"
-            val desc = meta?.optString("description") ?: "(script local)"
-            out.add(TerminalLine("  ● %-18s v%-6s %s".format(name, ver, desc), TerminalLine.Type.OUTPUT))
+            val desc = meta?.optString("description") ?: "(local script)"
+            out.add(TerminalLine("  * %-18s v%-6s %s".format(name, ver, desc), TerminalLine.Type.OUTPUT))
         }
         out.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Execute com: pkg run <nome>  ou  <nome> direto.", TerminalLine.Type.SYSTEM))
+        out.add(TerminalLine("Run with: pkg run <name>  or  <name> directly.", TerminalLine.Type.SYSTEM))
         return out
     }
 
     fun cmdAvailable(): List<TerminalLine> {
         val manifest = loadManifest()
         val scripts = manifest.optJSONArray("scripts") ?: return listOf(
-            TerminalLine("Manifest vazio.", TerminalLine.Type.WARNING)
+            TerminalLine("Manifest is empty.", TerminalLine.Type.WARNING)
         )
         val out = mutableListOf<TerminalLine>(
-            TerminalLine("Repositório: ${manifest.optString("repo")}", TerminalLine.Type.INFO),
-            TerminalLine("Pacotes disponíveis (${scripts.length()}):", TerminalLine.Type.INFO),
+            TerminalLine("Repository: ${manifest.optString("repo")}", TerminalLine.Type.INFO),
+            TerminalLine("Available packages (${scripts.length()}):", TerminalLine.Type.INFO),
             TerminalLine("", TerminalLine.Type.OUTPUT)
         )
         for (i in 0 until scripts.length()) {
@@ -92,12 +101,12 @@ class PkgManager(private val context: Context) {
             out.add(TerminalLine("  $mark %-18s v%-6s %s".format(name, ver, desc), type))
         }
         out.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Instale com: pkg install <nome>", TerminalLine.Type.SYSTEM))
+        out.add(TerminalLine("Install with: pkg install <name>", TerminalLine.Type.SYSTEM))
         return out
     }
 
     fun cmdSearch(query: String): List<TerminalLine> {
-        if (query.isBlank()) return listOf(TerminalLine("Usage: pkg search <termo>", TerminalLine.Type.WARNING))
+        if (query.isBlank()) return listOf(TerminalLine("Usage: pkg search <term>", TerminalLine.Type.WARNING))
         val manifest = loadManifest()
         val scripts = manifest.optJSONArray("scripts") ?: return emptyList()
         val q = query.lowercase()
@@ -112,48 +121,48 @@ class PkgManager(private val context: Context) {
                 out.add(TerminalLine("  $mark %-18s v%-6s %s".format(name, ver, desc), TerminalLine.Type.OUTPUT))
             }
         }
-        return if (out.isEmpty()) listOf(TerminalLine("Nenhum pacote contém \"$query\".", TerminalLine.Type.WARNING))
-               else listOf(TerminalLine("Resultados para \"$query\":", TerminalLine.Type.INFO)) + out
+        return if (out.isEmpty()) listOf(TerminalLine("No package contains \"$query\".", TerminalLine.Type.WARNING))
+               else listOf(TerminalLine("Results for \"$query\":", TerminalLine.Type.INFO)) + out
     }
 
     fun cmdInfo(name: String): List<TerminalLine> {
         val meta = findInManifest(name) ?: return listOf(
-            TerminalLine("pkg: pacote '$name' não encontrado no manifest.", TerminalLine.Type.ERROR)
+            TerminalLine("pkg: package '$name' not found in manifest.", TerminalLine.Type.ERROR)
         )
         val installed = isInstalled(name)
         val out = mutableListOf<TerminalLine>()
-        out.add(TerminalLine("Nome:        ${meta.optString("name")}", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Versão:      ${meta.optString("version", "?")}", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Autor:       ${meta.optString("author", "anônimo")}", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Descrição:   ${meta.optString("description", "")}", TerminalLine.Type.OUTPUT))
+        out.add(TerminalLine("Name:        ${meta.optString("name")}", TerminalLine.Type.OUTPUT))
+        out.add(TerminalLine("Version:     ${meta.optString("version", "?")}", TerminalLine.Type.OUTPUT))
+        out.add(TerminalLine("Author:      ${meta.optString("author", "unknown")}", TerminalLine.Type.OUTPUT))
+        out.add(TerminalLine("Description: ${meta.optString("description", "")}", TerminalLine.Type.OUTPUT))
         if (meta.has("url")) out.add(TerminalLine("URL:         ${meta.optString("url")}", TerminalLine.Type.OUTPUT))
-        out.add(TerminalLine("Instalado:   ${if (installed) "sim (${scriptFile(name).length()} bytes)" else "não"}",
+        out.add(TerminalLine("Installed:   ${if (installed) "yes (${scriptFile(name).length()} bytes)" else "no"}",
             if (installed) TerminalLine.Type.SUCCESS else TerminalLine.Type.WARNING))
         return out
     }
 
     suspend fun cmdInstall(name: String): List<TerminalLine> {
         val meta = findInManifest(name) ?: return listOf(
-            TerminalLine("pkg: pacote '$name' não encontrado.", TerminalLine.Type.ERROR),
-            TerminalLine("Tente 'pkg update' para atualizar o manifest.", TerminalLine.Type.SYSTEM)
+            TerminalLine("pkg: package '$name' not found.", TerminalLine.Type.ERROR),
+            TerminalLine("Try 'pkg update' to refresh the manifest.", TerminalLine.Type.SYSTEM)
         )
         val out = mutableListOf<TerminalLine>()
-        out.add(TerminalLine("↓ Instalando $name...", TerminalLine.Type.INFO))
+        out.add(TerminalLine("Installing $name...", TerminalLine.Type.INFO))
         val dest = scriptFile(name)
         return try {
             val content = when {
                 meta.has("inline") -> meta.getString("inline")
                 meta.has("url") -> HttpClient.get(meta.getString("url"), timeoutMs = 15000)
-                else -> return out + TerminalLine("pkg: pacote sem conteúdo (sem 'inline' nem 'url').", TerminalLine.Type.ERROR)
+                else -> return out + TerminalLine("pkg: package has no content (missing 'inline' or 'url').", TerminalLine.Type.ERROR)
             }
             dest.writeText(content)
             dest.setExecutable(true)
-            out.add(TerminalLine("✓ Instalado: $name v${meta.optString("version", "?")} (${content.length} bytes)",
+            out.add(TerminalLine("Installed: $name v${meta.optString("version", "?")} (${content.length} bytes)",
                 TerminalLine.Type.SUCCESS))
-            out.add(TerminalLine("  Execute com: $name  ou  pkg run $name", TerminalLine.Type.SYSTEM))
+            out.add(TerminalLine("  Run with: $name  or  pkg run $name", TerminalLine.Type.SYSTEM))
             out
         } catch (e: Exception) {
-            out.add(TerminalLine("✗ Falha: ${e.message}", TerminalLine.Type.ERROR))
+            out.add(TerminalLine("Failed: ${e.message}", TerminalLine.Type.ERROR))
             out
         }
     }
@@ -161,28 +170,28 @@ class PkgManager(private val context: Context) {
     fun cmdRemove(name: String): List<TerminalLine> {
         val f = scriptFile(name)
         return if (!f.exists()) {
-            listOf(TerminalLine("pkg: '$name' não está instalado.", TerminalLine.Type.WARNING))
+            listOf(TerminalLine("pkg: '$name' is not installed.", TerminalLine.Type.WARNING))
         } else if (f.delete()) {
-            listOf(TerminalLine("✓ Removido: $name", TerminalLine.Type.SUCCESS))
+            listOf(TerminalLine("Removed: $name", TerminalLine.Type.SUCCESS))
         } else {
-            listOf(TerminalLine("✗ Falha ao remover '$name'.", TerminalLine.Type.ERROR))
+            listOf(TerminalLine("Failed to remove '$name'.", TerminalLine.Type.ERROR))
         }
     }
 
     suspend fun cmdRun(name: String, args: List<String>, workingDir: File): List<TerminalLine> {
         val f = scriptFile(name)
-        if (!f.exists()) return listOf(TerminalLine("pkg: '$name' não está instalado. Use 'pkg install $name'.", TerminalLine.Type.ERROR))
+        if (!f.exists()) return listOf(TerminalLine("pkg: '$name' is not installed. Use 'pkg install $name'.", TerminalLine.Type.ERROR))
         val quotedArgs = args.joinToString(" ") { "'${it.replace("'", "'\\''")}'" }
         return shell.executeLines("sh '${f.absolutePath}' $quotedArgs", workingDir, timeoutMs = 30_000L)
     }
 
     fun cmdRepo(): List<TerminalLine> {
         return listOf(
-            TerminalLine("Repositório atual:", TerminalLine.Type.INFO),
+            TerminalLine("Current repository:", TerminalLine.Type.INFO),
             TerminalLine("  $repoUrl", TerminalLine.Type.OUTPUT),
             TerminalLine("", TerminalLine.Type.OUTPUT),
-            TerminalLine("Trocar com: pkg setrepo <url>", TerminalLine.Type.SYSTEM),
-            TerminalLine("Resetar:    pkg setrepo default", TerminalLine.Type.SYSTEM)
+            TerminalLine("Change with: pkg setrepo <url>", TerminalLine.Type.SYSTEM),
+            TerminalLine("Reset:       pkg setrepo default", TerminalLine.Type.SYSTEM)
         )
     }
 
@@ -192,28 +201,28 @@ class PkgManager(private val context: Context) {
         repoUrl = newUrl
         manifestCacheFile.delete()
         return listOf(
-            TerminalLine("✓ Repositório alterado para:", TerminalLine.Type.SUCCESS),
+            TerminalLine("Repository changed to:", TerminalLine.Type.SUCCESS),
             TerminalLine("  $newUrl", TerminalLine.Type.OUTPUT),
-            TerminalLine("Execute 'pkg update' para baixar o novo manifest.", TerminalLine.Type.SYSTEM)
+            TerminalLine("Run 'pkg update' to fetch the new manifest.", TerminalLine.Type.SYSTEM)
         )
     }
 
     fun help(): List<TerminalLine> = listOf(
-        TerminalLine("pkg — Gerenciador de scripts do LayerDroid", TerminalLine.Type.SUCCESS),
+        TerminalLine("pkg — LayerDroid Script Manager", TerminalLine.Type.SUCCESS),
         TerminalLine("", TerminalLine.Type.OUTPUT),
-        TerminalLine("Comandos:", TerminalLine.Type.INFO),
-        TerminalLine("  pkg update            Baixa/atualiza o manifest do repositório", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg list              Lista scripts instalados", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg available         Lista scripts disponíveis no repositório", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg search <termo>    Busca pacotes por nome/descrição", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg info <nome>       Detalhes de um pacote", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg install <nome>    Instala um pacote", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg remove <nome>     Remove um pacote instalado", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg run <nome> [args] Executa um script instalado", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg repo              Mostra URL do repositório atual", TerminalLine.Type.OUTPUT),
-        TerminalLine("  pkg setrepo <url>     Define novo repositório (ou 'default')", TerminalLine.Type.OUTPUT),
+        TerminalLine("Commands:", TerminalLine.Type.INFO),
+        TerminalLine("  pkg update            Download/update manifest from repository", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg list              List installed scripts", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg available         List scripts available in repository", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg search <term>     Search packages by name/description", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg info <name>       Show package details", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg install <name>    Install a package", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg remove <name>     Remove an installed package", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg run <name> [args] Run an installed script", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg repo              Show current repository URL", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg setrepo <url>     Set new repository (or 'default')", TerminalLine.Type.OUTPUT),
         TerminalLine("", TerminalLine.Type.OUTPUT),
-        TerminalLine("Dica: scripts instalados podem ser chamados direto pelo nome.", TerminalLine.Type.SYSTEM)
+        TerminalLine("Tip: installed scripts can be called directly by name.", TerminalLine.Type.SYSTEM)
     )
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -224,7 +233,7 @@ class PkgManager(private val context: Context) {
                        else context.assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
             JSONObject(text)
         } catch (e: Exception) {
-            JSONObject().apply { put("repo", "vazio"); put("scripts", org.json.JSONArray()) }
+            JSONObject().apply { put("repo", "empty"); put("scripts", org.json.JSONArray()) }
         }
     }
 

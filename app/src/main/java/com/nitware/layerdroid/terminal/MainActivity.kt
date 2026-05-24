@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.nitware.layerdroid.terminal.databinding.ActivityMainBinding
@@ -55,11 +56,34 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        checkTermsOfUse()
         setupToolbar()
         setupRecyclerView()
         setupSpecialKeys()
         setupInput()
         observeViewModel()
+    }
+
+    private fun checkTermsOfUse() {
+        val prefs = getSharedPreferences("layerdroid", MODE_PRIVATE)
+        if (prefs.getBoolean("terms_accepted", false)) return
+        AlertDialog.Builder(this)
+            .setTitle("Terms of Use")
+            .setMessage(
+                "Welcome to LayerDroid Terminal.\n\n" +
+                "By using this app you agree to:\n\n" +
+                "• Use it only for lawful purposes.\n" +
+                "• Not attempt to harm the device or other systems.\n" +
+                "• Accept that shell commands execute with app permissions.\n" +
+                "• The developer is not liable for data loss or misuse.\n\n" +
+                "This app may request permissions for network, storage, and device features."
+            )
+            .setCancelable(false)
+            .setPositiveButton("Accept") { _, _ ->
+                prefs.edit().putBoolean("terms_accepted", true).apply()
+            }
+            .setNegativeButton("Decline") { _, _ -> finish() }
+            .show()
     }
 
     private fun setupToolbar() {
@@ -142,7 +166,7 @@ class MainActivity : AppCompatActivity() {
                 ctrlActive = !ctrlActive
                 altActive = false
                 updateModifierState()
-                if (ctrlActive) Toast.makeText(this, "CTRL ativo – pressione C, D, L, A ou E", Toast.LENGTH_SHORT).show()
+                if (ctrlActive) Toast.makeText(this, "CTRL active - press C, D, L, A or E", Toast.LENGTH_SHORT).show()
             }
             "ALT" -> {
                 altActive = !altActive
@@ -242,7 +266,7 @@ class MainActivity : AppCompatActivity() {
         binding.etInput.apply {
             setTextColor(Color.parseColor("#E6EDF3"))
             setHintTextColor(Color.parseColor("#484F58"))
-            hint = "Digite um comando..."
+            hint = "Type a command..."
             setBackgroundColor(Color.TRANSPARENT)
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 14f
@@ -314,7 +338,7 @@ class MainActivity : AppCompatActivity() {
         val text = lines.takeLast(50).joinToString("\n") { it.text }
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("Terminal output", text))
-        Toast.makeText(this, "Copiado para a área de transferência", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
     }
 
     private fun pasteClipboard() {

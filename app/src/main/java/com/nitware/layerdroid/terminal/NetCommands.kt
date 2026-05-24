@@ -42,7 +42,7 @@ object NetCommands {
         return try {
             val ip = HttpClient.get("https://api.ipify.org", timeoutMs = 6000).trim()
             listOf(
-                TerminalLine("IP público:", TerminalLine.Type.INFO),
+                TerminalLine("Public IP:", TerminalLine.Type.INFO),
                 TerminalLine("  $ip", TerminalLine.Type.SUCCESS)
             )
         } catch (e: Exception) {
@@ -56,12 +56,12 @@ object NetCommands {
         return try {
             val json = JSONObject(HttpClient.get(url, timeoutMs = 8000))
             if (json.optString("status") != "success") {
-                return listOf(TerminalLine("ipinfo: ${json.optString("message", "erro")}", TerminalLine.Type.ERROR))
+                return listOf(TerminalLine("ipinfo: ${json.optString("message", "error")}", TerminalLine.Type.ERROR))
             }
             listOf(
                 TerminalLine("IP:          ${json.optString("query")}", TerminalLine.Type.SUCCESS),
-                TerminalLine("Localização: ${json.optString("city")}, ${json.optString("regionName")}, ${json.optString("country")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("CEP:         ${json.optString("zip")}", TerminalLine.Type.OUTPUT),
+                TerminalLine("Location:    ${json.optString("city")}, ${json.optString("regionName")}, ${json.optString("country")}", TerminalLine.Type.OUTPUT),
+                TerminalLine("ZIP:         ${json.optString("zip")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Coords:      ${json.optDouble("lat")}, ${json.optDouble("lon")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Timezone:    ${json.optString("timezone")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("ISP:         ${json.optString("isp")}", TerminalLine.Type.OUTPUT),
@@ -99,10 +99,10 @@ object NetCommands {
         val host = args.getOrNull(0)
             ?: return listOf(TerminalLine("Usage: port <host> <port> [port2 ...]", TerminalLine.Type.WARNING))
         val ports = args.drop(1).mapNotNull { it.toIntOrNull() }
-        if (ports.isEmpty()) return listOf(TerminalLine("port: informe pelo menos uma porta", TerminalLine.Type.WARNING))
+        if (ports.isEmpty()) return listOf(TerminalLine("port: specify at least one port", TerminalLine.Type.WARNING))
 
         val lines = mutableListOf<TerminalLine>()
-        lines.add(TerminalLine("Verificando portas em $host...", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("Checking ports on $host...", TerminalLine.Type.INFO))
         ports.forEach { port ->
             val start = System.currentTimeMillis()
             val open = withContext(Dispatchers.IO) {
@@ -149,7 +149,7 @@ object NetCommands {
             }
         }
 
-        if (urlStr.isEmpty()) return listOf(TerminalLine("http: URL necessária (http:// ou https://)", TerminalLine.Type.ERROR))
+        if (urlStr.isEmpty()) return listOf(TerminalLine("http: URL required (http:// or https://)", TerminalLine.Type.ERROR))
 
         return try {
             val start = System.currentTimeMillis()
@@ -187,7 +187,7 @@ object NetCommands {
             } else {
                 body.lines().take(80).forEach { lines.add(TerminalLine(it, TerminalLine.Type.OUTPUT)) }
             }
-            if (body.lines().size > 80) lines.add(TerminalLine("... (${body.lines().size - 80} linhas omitidas)", TerminalLine.Type.SYSTEM))
+            if (body.lines().size > 80) lines.add(TerminalLine("... (${body.lines().size - 80} lines omitted)", TerminalLine.Type.SYSTEM))
             lines
         } catch (e: Exception) {
             listOf(TerminalLine("http: ${e.message}", TerminalLine.Type.ERROR))
@@ -206,12 +206,12 @@ object NetCommands {
                 TerminalLine("@${json.optString("login")}  ${json.optString("name", "")}", TerminalLine.Type.SUCCESS),
                 TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
                 TerminalLine("Bio:        ${json.optString("bio", "—")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("Empresa:    ${json.optString("company", "—")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("Local:      ${json.optString("location", "—")}", TerminalLine.Type.OUTPUT),
+                TerminalLine("Company:    ${json.optString("company", "—")}", TerminalLine.Type.OUTPUT),
+                TerminalLine("Location:   ${json.optString("location", "—")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Repos:      ${json.optInt("public_repos")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Followers:  ${json.optInt("followers")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Following:  ${json.optInt("following")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("Criado em:  ${json.optString("created_at").take(10)}", TerminalLine.Type.OUTPUT),
+                TerminalLine("Created:    ${json.optString("created_at").take(10)}", TerminalLine.Type.OUTPUT),
                 TerminalLine("URL:        ${json.optString("html_url")}", TerminalLine.Type.INFO)
             )
         } catch (e: Exception) {
@@ -229,11 +229,11 @@ object NetCommands {
                 TerminalLine("${json.optString("full_name")}", TerminalLine.Type.SUCCESS),
                 TerminalLine("─".repeat(40), TerminalLine.Type.SYSTEM),
                 TerminalLine("Desc:       ${json.optString("description", "—")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("Linguagem:  ${json.optString("language", "—")}", TerminalLine.Type.OUTPUT),
+                TerminalLine("Language:   ${json.optString("language", "—")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Stars:      ${json.optInt("stargazers_count")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Forks:      ${json.optInt("forks_count")}", TerminalLine.Type.OUTPUT),
                 TerminalLine("Issues:     ${json.optInt("open_issues_count")}", TerminalLine.Type.OUTPUT),
-                TerminalLine("Licença:    ${json.optJSONObject("license")?.optString("spdx_id") ?: "—"}", TerminalLine.Type.OUTPUT),
+                TerminalLine("License:    ${json.optJSONObject("license")?.optString("spdx_id") ?: "—"}", TerminalLine.Type.OUTPUT),
                 TerminalLine("URL:        ${json.optString("html_url")}", TerminalLine.Type.INFO)
             )
         } catch (e: Exception) {
@@ -245,7 +245,7 @@ object NetCommands {
 
     suspend fun tldr(args: List<String>): List<TerminalLine> {
         val cmd = args.firstOrNull() ?: return listOf(
-            TerminalLine("Usage: tldr <comando>", TerminalLine.Type.WARNING)
+            TerminalLine("Usage: tldr <command>", TerminalLine.Type.WARNING)
         )
         val platforms = listOf("common", "linux", "android", "osx")
         for (platform in platforms) {
@@ -266,14 +266,14 @@ object NetCommands {
                 return lines
             } catch (_: Exception) { /* try next platform */ }
         }
-        return listOf(TerminalLine("tldr: página não encontrada para '$cmd'", TerminalLine.Type.ERROR))
+        return listOf(TerminalLine("tldr: page not found for '$cmd'", TerminalLine.Type.ERROR))
     }
 
     // ─── Dictionary ───────────────────────────────────────────────────────────
 
     suspend fun define(args: List<String>): List<TerminalLine> {
         val word = args.firstOrNull() ?: return listOf(
-            TerminalLine("Usage: define <word>  (inglês)", TerminalLine.Type.WARNING)
+            TerminalLine("Usage: define <word>  (English)", TerminalLine.Type.WARNING)
         )
         return try {
             val resp = HttpClient.get(
@@ -281,7 +281,7 @@ object NetCommands {
                 timeoutMs = 8000
             )
             val arr = JSONArray(resp)
-            if (arr.length() == 0) return listOf(TerminalLine("Sem definição para '$word'", TerminalLine.Type.WARNING))
+            if (arr.length() == 0) return listOf(TerminalLine("No definition found for '$word'", TerminalLine.Type.WARNING))
             val entry = arr.getJSONObject(0)
             val out = mutableListOf<TerminalLine>()
             out.add(TerminalLine(entry.optString("word"), TerminalLine.Type.SUCCESS))
@@ -384,15 +384,15 @@ object NetCommands {
     fun qrCode(args: List<String>): Pair<List<TerminalLine>, String?> {
         val text = args.joinToString(" ")
         if (text.isEmpty()) return Pair(
-            listOf(TerminalLine("Usage: qr <texto>", TerminalLine.Type.WARNING)), null
+            listOf(TerminalLine("Usage: qr <text>", TerminalLine.Type.WARNING)), null
         )
         val url = "https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=20&data=${HttpClient.urlEncode(text)}"
         return Pair(
             listOf(
-                TerminalLine("QR Code gerado:", TerminalLine.Type.SUCCESS),
-                TerminalLine("  Conteúdo: $text", TerminalLine.Type.OUTPUT),
+                TerminalLine("QR Code generated:", TerminalLine.Type.SUCCESS),
+                TerminalLine("  Content:  $text", TerminalLine.Type.OUTPUT),
                 TerminalLine("  URL:      $url", TerminalLine.Type.INFO),
-                TerminalLine("Abrindo no navegador...", TerminalLine.Type.SYSTEM)
+                TerminalLine("Opening in browser...", TerminalLine.Type.SYSTEM)
             ),
             url
         )
@@ -402,7 +402,7 @@ object NetCommands {
 
     suspend fun speedtest(): List<TerminalLine> {
         val lines = mutableListOf<TerminalLine>()
-        lines.add(TerminalLine("Testando velocidade de download (1 MB)...", TerminalLine.Type.INFO))
+        lines.add(TerminalLine("Testing download speed (1 MB)...", TerminalLine.Type.INFO))
         return try {
             val testUrl = "https://speed.cloudflare.com/__down?bytes=1048576"
             val start = System.currentTimeMillis()
@@ -427,7 +427,7 @@ object NetCommands {
             val elapsed = (System.currentTimeMillis() - start) / 1000.0
             val mbps = (bytes * 8.0 / 1_000_000.0) / elapsed
             lines.add(TerminalLine("Download:  ${"%.2f".format(mbps)} Mbps", TerminalLine.Type.SUCCESS))
-            lines.add(TerminalLine("Recebidos: ${bytes / 1024} KB em ${"%.2f".format(elapsed)}s", TerminalLine.Type.OUTPUT))
+            lines.add(TerminalLine("Received:  ${bytes / 1024} KB in ${"%.2f".format(elapsed)}s", TerminalLine.Type.OUTPUT))
             lines
         } catch (e: Exception) {
             lines.add(TerminalLine("speedtest: ${e.message}", TerminalLine.Type.ERROR))
