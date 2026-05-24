@@ -67,22 +67,25 @@ class MainActivity : AppCompatActivity() {
     private fun checkTermsOfUse() {
         val prefs = getSharedPreferences("layerdroid", MODE_PRIVATE)
         if (prefs.getBoolean("terms_accepted", false)) return
-        AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Terms of Use")
             .setMessage(
                 "Welcome to LayerDroid Terminal.\n\n" +
-                "By using this app you agree to:\n\n" +
-                "• Use it only for lawful purposes.\n" +
-                "• Not attempt to harm the device or other systems.\n" +
-                "• Accept that shell commands execute with app permissions.\n" +
-                "• The developer is not liable for data loss or misuse.\n\n" +
-                "This app may request permissions for network, storage, and device features."
+                "By using this app you agree that:\n\n" +
+                "• This app executes shell commands on your device\n" +
+                "• Some commands may access system information\n" +
+                "• Network commands will use your internet connection\n" +
+                "• The flashlight, vibration and notification features require permissions\n" +
+                "• Use at your own risk — the developers are not liable for any damage\n\n" +
+                "LayerDroid Terminal is provided as-is for educational and development purposes."
             )
             .setCancelable(false)
             .setPositiveButton("Accept") { _, _ ->
                 prefs.edit().putBoolean("terms_accepted", true).apply()
             }
-            .setNegativeButton("Decline") { _, _ -> finish() }
+            .setNegativeButton("Decline") { _, _ ->
+                finish()
+            }
             .show()
     }
 
@@ -223,7 +226,7 @@ class MainActivity : AppCompatActivity() {
             "L" -> viewModel.executeCommand("clear")
             "A" -> binding.etInput.setSelection(0)
             "E" -> binding.etInput.setSelection(binding.etInput.text?.length ?: 0)
-            else -> Toast.makeText(this, "^$key não mapeado", Toast.LENGTH_SHORT).show()
+            else -> Toast.makeText(this, "^$key not mapped", Toast.LENGTH_SHORT).show()
         }
     }
 
