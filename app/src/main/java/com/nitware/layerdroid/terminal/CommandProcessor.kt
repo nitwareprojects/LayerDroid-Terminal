@@ -267,13 +267,13 @@ class CommandProcessor(private val context: Context) {
             "available", "avail", "all"   -> Result(pkg.cmdAvailable())
             "search", "find"              -> Result(pkg.cmdSearch(rest.joinToString(" ")))
             "info", "show"                -> Result(rest.firstOrNull()?.let { pkg.cmdInfo(it) }
-                                              ?: listOf(TerminalLine("Usage: pkg info <nome>", TerminalLine.Type.WARNING)))
+                                              ?: listOf(TerminalLine("Usage: pkg info <name>", TerminalLine.Type.WARNING)))
             "install", "add", "i"         -> Result(rest.firstOrNull()?.let { pkg.cmdInstall(it) }
-                                              ?: listOf(TerminalLine("Usage: pkg install <nome>", TerminalLine.Type.WARNING)))
+                                              ?: listOf(TerminalLine("Usage: pkg install <name>", TerminalLine.Type.WARNING)))
             "remove", "uninstall", "rm"   -> Result(rest.firstOrNull()?.let { pkg.cmdRemove(it) }
-                                              ?: listOf(TerminalLine("Usage: pkg remove <nome>", TerminalLine.Type.WARNING)))
+                                              ?: listOf(TerminalLine("Usage: pkg remove <name>", TerminalLine.Type.WARNING)))
             "run", "exec"                 -> Result(rest.firstOrNull()?.let { pkg.cmdRun(it, rest.drop(1), currentDir) }
-                                              ?: listOf(TerminalLine("Usage: pkg run <nome> [args...]", TerminalLine.Type.WARNING)))
+                                              ?: listOf(TerminalLine("Usage: pkg run <name> [args...]", TerminalLine.Type.WARNING)))
             "repo"                        -> Result(pkg.cmdRepo())
             "setrepo"                     -> Result(pkg.cmdSetRepo(rest.joinToString(" ")))
             "help", "-h", "--help", "?"   -> Result(pkg.help())

@@ -43,7 +43,7 @@ class NanoActivity : AppCompatActivity() {
 
         val path = intent.getStringExtra(EXTRA_FILE_PATH)
         if (path == null) {
-            Toast.makeText(this, "Arquivo não especificado", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No file specified", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -68,11 +68,11 @@ class NanoActivity : AppCompatActivity() {
     }
 
     private fun updateTitle() {
-        val name = file?.name ?: "novo"
+        val name = file?.name ?: "new"
         val modified = isModified()
-        val ro = if (readOnly) " (somente leitura)" else ""
+        val ro = if (readOnly) " (read-only)" else ""
         val mark = if (modified) " *" else ""
-        binding.toolbar.title = "GNU nano $mark"
+        binding.toolbar.title = "nano $mark"
         binding.toolbar.subtitle = "$name$ro"
     }
 
@@ -103,15 +103,15 @@ class NanoActivity : AppCompatActivity() {
 
     private fun setupBottomBar() {
         val shortcuts: List<Pair<String, () -> Unit>> = listOf(
-            "^G Ajuda" to { showHelp() },
-            "^O Salvar" to { saveFile() },
-            "^W Buscar" to { showSearch() },
-            "^K Cortar" to { cutLine() },
-            "^U Colar" to { pasteLine() },
-            "^_ Linha" to { gotoLine() },
-            "^A Início" to { binding.etEditor.setSelection(0) },
-            "^E Fim" to { binding.etEditor.setSelection(binding.etEditor.text.length) },
-            "^X Sair" to { attemptExit() }
+            "^G Help"  to { showHelp() },
+            "^O Save"  to { saveFile() },
+            "^W Find"  to { showSearch() },
+            "^K Cut"   to { cutLine() },
+            "^U Paste" to { pasteLine() },
+            "^_ Line"  to { gotoLine() },
+            "^A Start" to { binding.etEditor.setSelection(0) },
+            "^E End"   to { binding.etEditor.setSelection(binding.etEditor.text.length) },
+            "^X Exit"  to { attemptExit() }
         )
 
         shortcuts.forEach { (label, action) ->
@@ -140,33 +140,33 @@ class NanoActivity : AppCompatActivity() {
         try {
             if (f.exists()) {
                 if (!f.canRead()) {
-                    Toast.makeText(this, "Sem permissão de leitura", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "No read permission", Toast.LENGTH_LONG).show()
                     finish()
                     return
                 }
                 if (f.length() > 10 * 1024 * 1024) {
-                    Toast.makeText(this, "Arquivo muito grande (>10MB)", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "File too large (>10MB)", Toast.LENGTH_LONG).show()
                     finish()
                     return
                 }
                 originalContent = f.readText()
                 binding.etEditor.setText(originalContent)
-                showStatus("Lido ${countLines(originalContent)} linha(s) de ${f.name}")
+                showStatus("Read ${countLines(originalContent)} line(s) from ${f.name}")
             } else {
                 binding.etEditor.setText("")
-                showStatus("[ Novo arquivo: ${f.name} ]")
+                showStatus("[ New file: ${f.name} ]")
             }
             updateTitle()
             updateStatus()
         } catch (e: Exception) {
-            Toast.makeText(this, "Erro: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
         }
     }
 
     private fun saveFile() {
         if (readOnly) {
-            Toast.makeText(this, "Arquivo em modo somente leitura", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "File is read-only", Toast.LENGTH_SHORT).show()
             return
         }
         val f = file ?: return
@@ -177,10 +177,10 @@ class NanoActivity : AppCompatActivity() {
             originalContent = content
             updateTitle()
             updateStatus()
-            showStatus("Gravadas ${countLines(content)} linha(s) em ${f.name}")
-            Toast.makeText(this, "Salvo: ${f.name}", Toast.LENGTH_SHORT).show()
+            showStatus("Wrote ${countLines(content)} line(s) to ${f.name}")
+            Toast.makeText(this, "Saved: ${f.name}", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Erro ao salvar: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Save error: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -195,33 +195,33 @@ class NanoActivity : AppCompatActivity() {
         val newText = text.removeRange(lineStart, lineEnd)
         et.setText(newText)
         et.setSelection(lineStart.coerceAtMost(newText.length))
-        showStatus("Linha recortada (${cut.trimEnd().length} chars)")
+        showStatus("Line cut (${cut.trimEnd().length} chars)")
     }
 
     private fun pasteLine() {
         val et = binding.etEditor
         val toPaste = clipboard.text
         if (toPaste.isEmpty()) {
-            showStatus("Buffer vazio")
+            showStatus("Buffer empty")
             return
         }
         val pos = et.selectionStart.coerceAtLeast(0)
         et.text.insert(pos, toPaste)
-        showStatus("Colado")
+        showStatus("Pasted")
     }
 
     private fun showSearch() {
         val input = EditText(this).apply {
-            hint = "Buscar..."
+            hint = "Search..."
             setTextColor(Color.parseColor("#E6EDF3"))
             setHintTextColor(Color.parseColor("#484F58"))
             setBackgroundColor(Color.parseColor("#0D1117"))
             typeface = Typeface.MONOSPACE
         }
         AlertDialog.Builder(this)
-            .setTitle("Buscar")
+            .setTitle("Find")
             .setView(input)
-            .setPositiveButton("Buscar") { _, _ ->
+            .setPositiveButton("Find") { _, _ ->
                 val query = input.text.toString()
                 if (query.isEmpty()) return@setPositiveButton
                 val text = binding.etEditor.text.toString()
@@ -231,26 +231,26 @@ class NanoActivity : AppCompatActivity() {
                 if (idx >= 0) {
                     binding.etEditor.setSelection(idx, idx + query.length)
                     binding.etEditor.requestFocus()
-                    showStatus("Encontrado na posição $idx")
+                    showStatus("Found at position $idx")
                 } else {
-                    showStatus("\"$query\" não encontrado")
+                    showStatus("\"$query\" not found")
                 }
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun gotoLine() {
         val input = EditText(this).apply {
-            hint = "Número da linha"
+            hint = "Line number"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setTextColor(Color.parseColor("#E6EDF3"))
             setHintTextColor(Color.parseColor("#484F58"))
         }
         AlertDialog.Builder(this)
-            .setTitle("Ir para linha")
+            .setTitle("Go to line")
             .setView(input)
-            .setPositiveButton("Ir") { _, _ ->
+            .setPositiveButton("Go") { _, _ ->
                 val lineNum = input.text.toString().toIntOrNull() ?: return@setPositiveButton
                 val text = binding.etEditor.text.toString()
                 var current = 1
@@ -263,32 +263,32 @@ class NanoActivity : AppCompatActivity() {
                 }
                 binding.etEditor.setSelection(pos.coerceAtMost(text.length))
                 binding.etEditor.requestFocus()
-                showStatus("Linha $current")
+                showStatus("Line $current")
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun showHelp() {
         val help = """
-            GNU nano — Editor de texto
+            nano — Text Editor
 
-            Atalhos disponíveis:
-            ^G  Mostrar esta ajuda
-            ^O  Salvar o arquivo
-            ^W  Buscar texto
-            ^K  Cortar linha atual
-            ^U  Colar linha cortada
-            ^_  Ir para linha específica
-            ^A  Ir para início do arquivo
-            ^E  Ir para fim do arquivo
-            ^X  Sair do nano
+            Shortcuts:
+            ^G  Show this help
+            ^O  Save file
+            ^W  Find text
+            ^K  Cut current line
+            ^U  Paste cut line
+            ^_  Go to line number
+            ^A  Go to start of file
+            ^E  Go to end of file
+            ^X  Exit nano
 
-            Edite o texto livremente.
-            Modificações são marcadas com * no topo.
+            Edit text freely.
+            Unsaved changes are marked with * in the title.
         """.trimIndent()
         AlertDialog.Builder(this)
-            .setTitle("Ajuda")
+            .setTitle("Help")
             .setMessage(help)
             .setPositiveButton("OK", null)
             .show()
@@ -303,7 +303,7 @@ class NanoActivity : AppCompatActivity() {
         val pos = binding.etEditor.selectionStart.coerceAtLeast(0)
         val lineNum = text.substring(0, pos.coerceAtMost(text.length)).count { it == '\n' } + 1
         val colNum = pos - (text.lastIndexOf('\n', pos - 1).let { if (it < 0) -1 else it })
-        binding.tvCursor.text = "Lin $lineNum, Col $colNum"
+        binding.tvCursor.text = "Ln $lineNum, Col $colNum"
     }
 
     private fun isModified(): Boolean = binding.etEditor.text.toString() != originalContent
@@ -316,11 +316,11 @@ class NanoActivity : AppCompatActivity() {
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Arquivo modificado")
-            .setMessage("Salvar mudanças em \"${file?.name}\"?")
-            .setPositiveButton("Salvar") { _, _ -> saveFile(); finish() }
-            .setNegativeButton("Descartar") { _, _ -> finish() }
-            .setNeutralButton("Cancelar", null)
+            .setTitle("Unsaved changes")
+            .setMessage("Save changes to \"${file?.name}\"?")
+            .setPositiveButton("Save") { _, _ -> saveFile(); finish() }
+            .setNegativeButton("Discard") { _, _ -> finish() }
+            .setNeutralButton("Cancel", null)
             .show()
     }
 
@@ -329,7 +329,6 @@ class NanoActivity : AppCompatActivity() {
         attemptExit()
     }
 
-    // Static-ish clipboard for ^K / ^U within Nano session
     private object clipboard {
         var text: String = ""
     }

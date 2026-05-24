@@ -132,8 +132,8 @@ object DeviceCommands {
 
     fun torch(context: Context, args: List<String>): List<TerminalLine> {
         val on = when (args.firstOrNull()?.lowercase()) {
-            "on", "ligar", "1", "true" -> true
-            "off", "desligar", "0", "false" -> false
+            "on", "1", "true" -> true
+            "off", "0", "false" -> false
             else -> return listOf(TerminalLine("Usage: torch on|off", TerminalLine.Type.WARNING))
         }
         return try {
