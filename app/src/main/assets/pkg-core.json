@@ -5,49 +5,49 @@
   "scripts": [
     {
       "name": "hello",
-      "description": "Hello world em 3 idiomas",
+      "description": "Hello world in 3 languages",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\necho \"Olá, $(whoami)! 👋\"\necho \"Hello, $(whoami)!\"\necho \"Hola, $(whoami)!\"\necho\necho \"Diretório: $(pwd)\"\necho \"Data:      $(date)\"\n"
     },
     {
       "name": "sysinfo",
-      "description": "Snapshot completo do sistema",
+      "description": "Complete system snapshot",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\necho \"╔════════════════════════════════════╗\"\necho \"║       LayerDroid SysInfo           ║\"\necho \"╚════════════════════════════════════╝\"\necho\necho \"▸ KERNEL\"\nuname -a\necho\necho \"▸ CPU (primeiros 8 campos)\"\nhead -8 /proc/cpuinfo 2>/dev/null\necho\necho \"▸ MEMÓRIA\"\nhead -3 /proc/meminfo 2>/dev/null\necho\necho \"▸ UPTIME\"\ncat /proc/uptime 2>/dev/null\necho\necho \"▸ DISPOSITIVO\"\ngetprop ro.product.model 2>/dev/null\ngetprop ro.product.brand 2>/dev/null\ngetprop ro.build.version.release 2>/dev/null\n"
     },
     {
       "name": "randpass",
-      "description": "Gera senha aleatória forte (use: randpass [tamanho])",
+      "description": "Generate a strong random password (use: randpass [length])",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\nLEN=${1:-16}\ncat /dev/urandom | tr -dc 'a-zA-Z0-9!@#%^&*-_=+' 2>/dev/null | head -c $LEN\necho\n"
     },
     {
       "name": "ipcheck",
-      "description": "Mostra IP público + info de geolocalização",
+      "description": "Show public IP + geolocation info",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\necho \"IP público:\"\nwget -qO- https://api.ipify.org 2>/dev/null || curl -s https://api.ipify.org 2>/dev/null\necho\necho \"Info detalhada:\"\nwget -qO- http://ip-api.com/line/?fields=country,regionName,city,isp,org 2>/dev/null || curl -s http://ip-api.com/line/?fields=country,regionName,city,isp,org\n"
     },
     {
       "name": "diskbar",
-      "description": "Barra visual de uso de disco do /sdcard",
+      "description": "Visual disk usage bar for /sdcard",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\ndf /sdcard 2>/dev/null | tail -1 | awk '{\n  used=$3; total=$2;\n  if (total > 0) pct = int(used*100/total); else pct = 0;\n  bar = \"\";\n  filled = int(pct/2);\n  for (i=0; i<filled; i++) bar = bar \"█\";\n  for (i=filled; i<50; i++) bar = bar \"░\";\n  printf \"[%s] %d%%\\n\", bar, pct;\n  printf \"%d KB usados de %d KB\\n\", used, total;\n}'\n"
     },
     {
       "name": "calc",
-      "description": "Calculadora rápida (use: calc 1+2*3)",
+      "description": "Quick calculator (use: calc 1+2*3)",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\nif [ -z \"$1\" ]; then\n  echo \"Uso: calc <expressão>\"\n  echo \"Ex:  calc 2+3*4\"\n  exit 1\nfi\necho \"$@\" | awk '{print}' 2>/dev/null\nexpr \"$@\" 2>/dev/null || echo \"$@\" | bc 2>/dev/null || echo \"Expressão inválida\"\n"
     },
     {
       "name": "weather-script",
-      "description": "Clima rápido via wttr.in (use: weather-script [cidade])",
+      "description": "Quick weather via wttr.in (use: weather-script [city])",
       "version": "1.0",
       "author": "LayerDroid",
       "inline": "#!/system/bin/sh\nCITY=\"${1:-}\"\nURL=\"https://wttr.in/${CITY}?format=4&lang=pt\"\nwget -qO- \"$URL\" 2>/dev/null || curl -s \"$URL\"\n"

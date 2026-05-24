@@ -130,7 +130,7 @@
             android:inputType="textNoSuggestions|textVisiblePassword"
             android:imeOptions="actionSend|flagNoFullscreen"
             android:maxLines="1"
-            android:hint="Digite um comando..."
+            android:hint="Type a command..."
             android:textColorHint="@color/terminal_hint"
             android:paddingStart="4dp"
             android:paddingEnd="4dp" />
