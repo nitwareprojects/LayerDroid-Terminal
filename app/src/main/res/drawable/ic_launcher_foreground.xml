@@ -5,58 +5,43 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Terminal window frame -->
+    <!-- Title bar band — extends full canvas width for parallax effect -->
     <path
-        android:pathData="M18,22 L90,22 L90,90 L18,90 Z"
-        android:fillColor="#161B22"
-        android:strokeColor="#30363D"
-        android:strokeWidth="2.5" />
-
-    <!-- Title bar background -->
-    <path
-        android:pathData="M18,22 L90,22 L90,36 L18,36 Z"
+        android:pathData="M0,21 L108,21 L108,46 L0,46 Z"
         android:fillColor="#21262D" />
 
-    <!-- Title bar separator line -->
+    <!-- Separator line -->
     <path
-        android:pathData="M18,36 L90,36"
+        android:pathData="M0,46 L108,46"
         android:strokeColor="#30363D"
         android:strokeWidth="1.5" />
 
-    <!-- Traffic-light dots -->
-    <!-- Red dot -->
+    <!-- Traffic-light dots centered in title bar (y=33) -->
     <path
-        android:pathData="M29,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:pathData="M38,33 m-5.5,0 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0"
         android:fillColor="#FF5F57" />
-    <!-- Yellow dot -->
     <path
-        android:pathData="M41,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:pathData="M54,33 m-5.5,0 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0"
         android:fillColor="#FEBC2E" />
-    <!-- Green dot -->
     <path
-        android:pathData="M53,29 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:pathData="M70,33 m-5.5,0 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0"
         android:fillColor="#28C840" />
 
-    <!-- ">_" prompt — bright green, bold -->
+    <!-- ">_" prompt — centered in content area (y=46 to y=87, center=66) -->
     <!-- ">" chevron -->
     <path
-        android:pathData="M26,52 L40,62 L26,72"
+        android:pathData="M26,52 L50,66 L26,80"
         android:strokeColor="#56D364"
-        android:strokeWidth="5.5"
+        android:strokeWidth="6.5"
         android:fillColor="@android:color/transparent"
         android:strokeLineJoin="round"
         android:strokeLineCap="round" />
 
-    <!-- "_" cursor -->
+    <!-- "_" underline -->
     <path
-        android:pathData="M46,72 L68,72"
+        android:pathData="M56,80 L82,80"
         android:strokeColor="#56D364"
-        android:strokeWidth="5.5"
+        android:strokeWidth="6.5"
         android:strokeLineCap="round" />
 
-    <!-- Blinking cursor block (faint) -->
-    <path
-        android:pathData="M72,56 L82,56 L82,72 L72,72 Z"
-        android:fillColor="#56D364"
-        android:fillAlpha="0.35" />
 </vector>
