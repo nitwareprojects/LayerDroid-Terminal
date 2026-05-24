@@ -2,6 +2,7 @@ package com.nitware.layerdroid.terminal
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -27,7 +28,16 @@ class CommandProcessor(private val context: Context) {
         private const val TERMUX_BIN    = "$TERMUX_PREFIX/bin"
     }
 
-    private val hasTermux: Boolean get() = File(TERMUX_BIN).canExecute()
+    private val hasTermux: Boolean get() = isTermuxInstalled() && File(TERMUX_BIN).canExecute()
+
+    private fun isTermuxInstalled(): Boolean {
+        return try {
+            context.packageManager.getPackageInfo("com.termux", 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) { false }
+    }
+
+    fun isTermuxDetected(): Boolean = isTermuxInstalled()
 
     var currentDir: File = Environment.getExternalStorageDirectory().let {
         if (it.canRead()) it else context.filesDir
@@ -912,8 +922,11 @@ class CommandProcessor(private val context: Context) {
             "${h}h ${m}m"
         } catch (e: Exception) { "?" }
 
-        val termuxStatus = if (hasTermux) "Termux:  ${File(TERMUX_BIN).listFiles()?.size ?: 0} pkgs"
-                           else "Termux:  not installed"
+        val termuxStatus = when {
+            hasTermux -> "Termux:  ${File(TERMUX_BIN).listFiles()?.size ?: 0} pkgs (active)"
+            isTermuxInstalled() -> "Termux:  installed (sandboxed)"
+            else -> "Termux:  not installed"
+        }
 
         val logo = listOf(
             "  +--------------------+",
@@ -1514,21 +1527,33 @@ class CommandProcessor(private val context: Context) {
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("Termux Integration", TerminalLine.Type.INFO))
         lines.add(TerminalLine("-".repeat(40), TerminalLine.Type.SYSTEM))
-        if (hasTermux) {
-            val binDir = File(TERMUX_BIN)
-            val pkgCount = binDir.listFiles()?.size ?: 0
-            lines.add(TerminalLine("Status:   Detected and active", TerminalLine.Type.SUCCESS))
-            lines.add(TerminalLine("Prefix:   $TERMUX_PREFIX", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("Binaries: $pkgCount executables available", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("PATH:     ${envVars["PATH"]}", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("Termux binaries available in this session.", TerminalLine.Type.SUCCESS))
-        } else {
-            lines.add(TerminalLine("Status:   Not detected", TerminalLine.Type.WARNING))
-            lines.add(TerminalLine("Install Termux (F-Droid or Play Store) to get:", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  * Python, Node.js, Ruby, PHP", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  * Git, SSH, curl, wget (native)", TerminalLine.Type.OUTPUT))
-            lines.add(TerminalLine("  * 1000+ Linux packages", TerminalLine.Type.OUTPUT))
+        val installed = isTermuxInstalled()
+        val binAccessible = File(TERMUX_BIN).canExecute()
+        when {
+            installed && binAccessible -> {
+                val pkgCount = File(TERMUX_BIN).listFiles()?.size ?: 0
+                lines.add(TerminalLine("Status:   Installed + binaries accessible", TerminalLine.Type.SUCCESS))
+                lines.add(TerminalLine("Prefix:   $TERMUX_PREFIX", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("Binaries: $pkgCount executables", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("PATH:     ${envVars["PATH"]}", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("Termux binaries available in this session.", TerminalLine.Type.SUCCESS))
+            }
+            installed && !binAccessible -> {
+                lines.add(TerminalLine("Status:   Installed (sandboxed - binaries not accessible)", TerminalLine.Type.WARNING))
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("Android restricts cross-app file access.", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("To use Termux tools, open Termux directly.", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("Tip: root access allows full Termux integration.", TerminalLine.Type.SYSTEM))
+            }
+            else -> {
+                lines.add(TerminalLine("Status:   Not installed", TerminalLine.Type.WARNING))
+                lines.add(TerminalLine("Install Termux (F-Droid or Play Store) to get:", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  * Python, Node.js, Ruby, PHP", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  * Git, SSH, curl, wget (native)", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  * 1000+ Linux packages", TerminalLine.Type.OUTPUT))
+            }
         }
         return Result(lines)
     }
