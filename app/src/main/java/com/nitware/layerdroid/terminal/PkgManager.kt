@@ -217,8 +217,9 @@ class PkgManager(private val context: Context) {
     suspend fun cmdRun(name: String, args: List<String>, workingDir: File): List<TerminalLine> {
         val f = scriptFile(name)
         if (!f.exists()) return listOf(TerminalLine("pkg: '$name' is not installed. Use 'pkg install $name'.", TerminalLine.Type.ERROR))
+        val escapedPath = f.absolutePath.replace("'", "'\\''")
         val quotedArgs = args.joinToString(" ") { "'${it.replace("'", "'\\''")}'" }
-        return shell.executeLines("sh '${f.absolutePath}' $quotedArgs", workingDir, timeoutMs = 30_000L)
+        return shell.executeLines("sh '$escapedPath' $quotedArgs", workingDir, timeoutMs = 30_000L)
     }
 
     fun cmdRepo(): List<TerminalLine> {

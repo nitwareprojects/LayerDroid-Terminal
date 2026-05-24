@@ -109,11 +109,16 @@ class EditPackageActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun afterTextChanged(s: Editable?) { updateStatus() }
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                isDirty = binding.etCode.text.toString() != originalContent
-                updateTitle()
+                // Guard: don't mark dirty while loadData() is populating the editor
+                if (!isLoading) {
+                    isDirty = binding.etCode.text.toString() != originalContent
+                    updateTitle()
+                }
             }
         })
     }
+
+    private var isLoading = false
 
     private fun loadData() {
         if (editName != null) {
@@ -121,15 +126,25 @@ class EditPackageActivity : AppCompatActivity() {
             binding.etName.isEnabled = false
             binding.etName.setTextColor(Color.parseColor("#8B949E"))
 
-            val meta = pkgManager.getScriptMeta(editName!!)
-            binding.etDescription.setText(meta?.optString("description", "") ?: "")
-            binding.etVersion.setText(meta?.optString("version", "1.0") ?: "1.0")
-            binding.etAuthor.setText(meta?.optString("author", "") ?: "")
-
-            val file = pkgManager.scriptFile(editName!!)
-            val content = if (file.exists()) file.readText() else "#!/system/bin/sh\n"
-            binding.etCode.setText(content)
-            originalContent = content
+            isLoading = true
+            binding.btnSave.isEnabled = false
+            lifecycleScope.launch {
+                val meta = withContext(Dispatchers.IO) { pkgManager.getScriptMeta(editName!!) }
+                val content = withContext(Dispatchers.IO) {
+                    val file = pkgManager.scriptFile(editName!!)
+                    if (file.exists()) file.readText() else "#!/system/bin/sh\n"
+                }
+                binding.etDescription.setText(meta?.optString("description", "") ?: "")
+                binding.etVersion.setText(meta?.optString("version", "1.0") ?: "1.0")
+                binding.etAuthor.setText(meta?.optString("author", "") ?: "")
+                binding.etCode.setText(content)
+                originalContent = content
+                isDirty = false
+                isLoading = false
+                binding.btnSave.isEnabled = true
+                updateTitle()
+                updateStatus()
+            }
         } else {
             binding.etVersion.setText("1.0")
             showTemplatePicker()

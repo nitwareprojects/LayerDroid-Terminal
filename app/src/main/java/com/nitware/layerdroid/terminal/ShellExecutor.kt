@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
-import java.util.concurrent.Executors
 
 class ShellExecutor {
 
@@ -20,28 +19,26 @@ class ShellExecutor {
         timeoutMs: Long = 10_000L,
         envVars: Map<String, String> = emptyMap()
     ): Result = withContext(Dispatchers.IO) {
+        var process: Process? = null
         val result = withTimeoutOrNull(timeoutMs) {
             try {
                 val pb = ProcessBuilder("/system/bin/sh", "-c", command)
                     .directory(workingDir)
-                    .redirectErrorStream(true) // merge stderr into stdout — avoids deadlock
-                if (envVars.isNotEmpty()) {
-                    pb.environment().putAll(envVars)
-                }
-                val process = pb.start()
+                    .redirectErrorStream(true) // merge stderr → no deadlock, one stream to drain
+                if (envVars.isNotEmpty()) pb.environment().putAll(envVars)
 
-                // Read output in a dedicated thread so we never block the process
-                val outputFuture = Executors.newSingleThreadExecutor().submit<String> {
-                    process.inputStream.bufferedReader().readText()
-                }
-                process.waitFor()
-                val output = outputFuture.get()
-
-                Result(output.trimEnd('\n'), "", process.exitValue())
+                process = pb.start()
+                // With redirectErrorStream(true) there is only one stream; reading it directly
+                // is safe — the stream closes when the process exits, so readText() returns naturally.
+                val output = process!!.inputStream.bufferedReader().readText()
+                val exitCode = process!!.waitFor()
+                Result(output.trimEnd('\n'), "", exitCode)
             } catch (e: Exception) {
                 Result("", e.message ?: "Execution failed", -1)
             }
         }
+        // Kill subprocess if it outlived the timeout (prevents zombie processes)
+        process?.destroy()
         result ?: Result("", "Command timed out after ${timeoutMs / 1000}s", -1)
     }
 

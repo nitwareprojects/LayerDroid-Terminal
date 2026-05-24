@@ -72,6 +72,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         }
 
         processor.commandHistory.add(trimmed)
+        if (processor.commandHistory.size > 500) processor.commandHistory.removeAt(0)
         historyIndex = -1
 
         appendLines(
@@ -112,6 +113,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private fun appendLines(newLines: List<TerminalLine>) {
         val current = _lines.value.orEmpty().toMutableList()
         current.addAll(newLines)
+        // Cap terminal buffer to prevent unbounded memory growth
+        if (current.size > 2000) current.subList(0, current.size - 2000).clear()
         _lines.value = current
     }
 
