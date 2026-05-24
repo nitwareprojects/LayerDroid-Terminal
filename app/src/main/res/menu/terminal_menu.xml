@@ -9,22 +9,22 @@
 
     <item
         android:id="@+id/action_help"
-        android:title="Ajuda"
+        android:title="Help"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_copy"
-        android:title="Copiar saída"
+        android:title="Copy output"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_paste"
-        android:title="Colar"
+        android:title="Paste"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_clear"
-        android:title="Limpar terminal"
+        android:title="Clear terminal"
         app:showAsAction="never" />
 
 </menu>
