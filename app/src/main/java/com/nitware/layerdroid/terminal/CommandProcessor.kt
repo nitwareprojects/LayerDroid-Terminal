@@ -262,14 +262,34 @@ class CommandProcessor(private val context: Context) {
             ?: return Result(pkg.help())
         val rest = args.drop(1)
         return when (sub) {
-            "update", "up", "refresh"     -> Result(pkg.cmdUpdate())
+            "update", "up", "upgrade", "refresh" -> Result(pkg.cmdUpdate())
             "list", "ls", "installed"     -> Result(pkg.cmdList())
             "available", "avail", "all"   -> Result(pkg.cmdAvailable())
             "search", "find"              -> Result(pkg.cmdSearch(rest.joinToString(" ")))
             "info", "show"                -> Result(rest.firstOrNull()?.let { pkg.cmdInfo(it) }
                                               ?: listOf(TerminalLine("Usage: pkg info <name>", TerminalLine.Type.WARNING)))
-            "install", "add", "i"         -> Result(rest.firstOrNull()?.let { pkg.cmdInstall(it) }
-                                              ?: listOf(TerminalLine("Usage: pkg install <name>", TerminalLine.Type.WARNING)))
+            "install", "add", "i"         -> Result(rest.firstOrNull()?.let { name ->
+                                              val binaryOnly = setOf(
+                                                  "python", "python3", "pip", "pip3", "git", "node", "nodejs", "npm", "npx",
+                                                  "ruby", "gem", "php", "java", "javac", "gcc", "g++", "clang", "make",
+                                                  "go", "golang", "rust", "cargo", "perl", "lua", "vim", "neovim", "emacs",
+                                                  "wget", "curl", "ssh", "openssh", "ffmpeg", "sqlite", "mysql", "postgres",
+                                                  "firefox", "chrome", "chromium", "fastfetch", "neofetch-bin", "htop", "tmux"
+                                              )
+                                              if (name.lowercase() in binaryOnly) {
+                                                  listOf(
+                                                      TerminalLine("pkg: '$name' is a compiled binary — not installable here.", TerminalLine.Type.ERROR),
+                                                      TerminalLine("", TerminalLine.Type.OUTPUT),
+                                                      TerminalLine("LayerDroid pkg only installs shell scripts.", TerminalLine.Type.WARNING),
+                                                      TerminalLine("For compiled tools like $name, install Termux:", TerminalLine.Type.OUTPUT),
+                                                      TerminalLine("  https://termux.dev/  →  pkg install $name", TerminalLine.Type.INFO),
+                                                      TerminalLine("", TerminalLine.Type.OUTPUT),
+                                                      TerminalLine("Already have Termux? Scripts here can call $name if it's in PATH.", TerminalLine.Type.SYSTEM)
+                                                  )
+                                              } else {
+                                                  pkg.cmdInstall(name)
+                                              }
+                                          } ?: listOf(TerminalLine("Usage: pkg install <name>", TerminalLine.Type.WARNING)))
             "remove", "uninstall", "rm"   -> Result(rest.firstOrNull()?.let { pkg.cmdRemove(it) }
                                               ?: listOf(TerminalLine("Usage: pkg remove <name>", TerminalLine.Type.WARNING)))
             "run", "exec"                 -> Result(rest.firstOrNull()?.let { pkg.cmdRun(it, rest.drop(1), currentDir) }
