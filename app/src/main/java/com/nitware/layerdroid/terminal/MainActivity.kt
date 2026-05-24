@@ -72,16 +72,31 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("layerdroid", MODE_PRIVATE)
         if (prefs.getBoolean("terms_accepted", false)) return
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Terms of Use")
+            .setTitle("Terms of Use — LayerDroid v1.0")
             .setMessage(
-                "Welcome to LayerDroid Terminal.\n\n" +
-                "By using this app you agree that:\n\n" +
-                "• This app executes shell commands on your device\n" +
-                "• Some commands may access system information\n" +
-                "• Network commands will use your internet connection\n" +
-                "• The flashlight, vibration and notification features require permissions\n" +
-                "• Use at your own risk — the developers are not liable for any damage\n\n" +
-                "LayerDroid Terminal is provided as-is for educational and development purposes."
+                "Please read before continuing.\n\n" +
+                "1. Shell Command Execution\n" +
+                "LayerDroid executes shell commands on your device via /system/bin/sh. " +
+                "Commands run within the app's sandboxed permissions — no root access is " +
+                "granted or required. You are solely responsible for the commands you run.\n\n" +
+                "2. Network Access\n" +
+                "Commands such as weather, ipcheck, pkg update and netcheck connect to " +
+                "external servers. You are responsible for any data charges. No network " +
+                "requests are made without your explicit action.\n\n" +
+                "3. File System Access\n" +
+                "The app reads and writes files in its private storage. Saving to /sdcard " +
+                "on Android 11+ requires granting the \"All Files Access\" permission.\n\n" +
+                "4. Scripts & Packages\n" +
+                "Scripts installed via pkg are community-contributed shell scripts. Always " +
+                "review a script before running it. The developers are not responsible for " +
+                "third-party script content or behavior.\n\n" +
+                "5. No Warranty\n" +
+                "This software is provided \"as is\", without warranty of any kind. The " +
+                "developers are not liable for data loss, device damage, or any other harm.\n\n" +
+                "6. Privacy\n" +
+                "LayerDroid does not collect, store, or transmit personal data. " +
+                "Network requests are made only when you run network commands.\n\n" +
+                "Source: github.com/nitwareprojects/LayerDroid-Terminal"
             )
             .setCancelable(false)
             .setPositiveButton("Accept") { _, _ ->
@@ -101,6 +116,7 @@ class MainActivity : AppCompatActivity() {
             inflateMenu(R.menu.terminal_menu)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    R.id.action_scripts -> { startActivity(android.content.Intent(this, ScriptsActivity::class.java)); true }
                     R.id.action_clear -> { viewModel.executeCommand("clear"); true }
                     R.id.action_copy -> { copySelection(); true }
                     R.id.action_paste -> { pasteClipboard(); true }

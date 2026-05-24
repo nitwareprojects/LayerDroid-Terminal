@@ -42,6 +42,13 @@
         </activity>
 
         <activity
+            android:name=".ScriptsActivity"
+            android:exported="false"
+            android:label="Scripts"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="keyboardHidden|orientation|screenSize" />
+
+        <activity
             android:name=".NanoActivity"
             android:exported="false"
             android:label="nano"
