@@ -27,16 +27,16 @@ class CommandProcessor(private val context: Context) {
         private const val TERMUX_BIN    = "$TERMUX_PREFIX/bin"
         private const val PISTON_URL    = "https://emkc.org/api/v2/piston/execute"
 
-        // Maps command name → Piston (language, version)
+        // Maps command name → Piston (language, version) — full versions required
         private val PISTON_LANGS = mapOf(
-            "python3" to ("python"     to "3"),
-            "python"  to ("python"     to "3"),
-            "python2" to ("python"     to "2"),
-            "node"    to ("javascript" to "18"),
-            "nodejs"  to ("javascript" to "18"),
-            "php"     to ("php"        to "8"),
-            "ruby"    to ("ruby"       to "3"),
-            "lua"     to ("lua"        to "5")
+            "python3" to ("python" to "3.10.0"),
+            "python"  to ("python" to "3.10.0"),
+            "python2" to ("python" to "2.7.18"),
+            "node"    to ("node"   to "18.15.0"),
+            "nodejs"  to ("node"   to "18.15.0"),
+            "php"     to ("php"    to "8.2.3"),
+            "ruby"    to ("ruby"   to "3.0.1"),
+            "lua"     to ("lua"    to "5.4.4")
         )
     }
 
