@@ -10,7 +10,7 @@ import java.net.URLEncoder
 
 object HttpClient {
 
-    private const val USER_AGENT = "LayerDroid-Terminal/1.0 (Android)"
+    private const val USER_AGENT = "LayerDroid-Terminal/1.0.1 (Android)"
     private const val DEFAULT_TIMEOUT = 10_000
 
     suspend fun get(

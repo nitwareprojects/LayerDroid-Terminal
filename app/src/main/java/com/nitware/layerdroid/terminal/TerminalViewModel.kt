@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 
 class TerminalViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,6 +40,27 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     init {
         addWelcome()
+        checkForAppUpdate()
+    }
+
+    private fun checkForAppUpdate() {
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    HttpClient.get(
+                        "https://api.github.com/repos/nitwareprojects/LayerDroid-Terminal/releases/latest",
+                        timeoutMs = 6000,
+                        headers = mapOf("Accept" to "application/vnd.github+json")
+                    )
+                }
+                val latestTag = JSONObject(response).optString("tag_name", "").trimStart('v')
+                if (latestTag.isNotEmpty() && latestTag != BuildConfig.VERSION_NAME) {
+                    appendLines(listOf(
+                        TerminalLine("  Update available: v${BuildConfig.VERSION_NAME} → v$latestTag  •  run 'app-update'", TerminalLine.Type.WARNING)
+                    ))
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun addWelcome() {
@@ -46,7 +68,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             TerminalLine("", TerminalLine.Type.OUTPUT),
             TerminalLine("  +----------------------------------+", TerminalLine.Type.SUCCESS),
             TerminalLine("  |                                  |", TerminalLine.Type.SUCCESS),
-            TerminalLine("  |   >_ LayerDroid Terminal v1.0    |", TerminalLine.Type.SUCCESS),
+            TerminalLine("  |   >_ LayerDroid Terminal v1.0.1  |", TerminalLine.Type.SUCCESS),
             TerminalLine("  |      Advanced Android Terminal   |", TerminalLine.Type.SUCCESS),
             TerminalLine("  |                                  |", TerminalLine.Type.SUCCESS),
             TerminalLine("  +----------------------------------+", TerminalLine.Type.SUCCESS),
@@ -57,6 +79,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             TerminalLine("  * 'nano <file>'    - text editor", TerminalLine.Type.INFO),
             TerminalLine("  * 'calc sqrt(16)'  - calculator", TerminalLine.Type.INFO),
             TerminalLine("  * 'termux-info'    - Termux integration", TerminalLine.Type.INFO),
+            TerminalLine("  * 'app-update'     - check for app updates", TerminalLine.Type.INFO),
             TerminalLine("", TerminalLine.Type.OUTPUT),
             TerminalLine("  Pipes: ls | grep foo    Redirects: cmd > file", TerminalLine.Type.SYSTEM),
             TerminalLine("", TerminalLine.Type.OUTPUT)
@@ -157,10 +180,12 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             "nano","vi","vim","edit","view","less","more",
             "pkg",
             "weather","wttr","myip","ipinfo","gh","gh-repo","tldr","define","joke","catfact","fact",
-            "coin","crypto","qr","http","fetch","dns","nslookup","dig","port","speedtest",
+            "coin","btc","crypto","qr","http","fetch","dns","nslookup","dig","port","portcheck","speedtest","speed",
             "hash","encode","decode","jq","calc","math","open","browse",
             "python","python3","node","nodejs","php","ruby","lua","git","ssh","termux-info",
-            "battery","clip","copy","paste","vibrate","notify","share","torch","tts","volume","wifi","device"
+            "battery","bat","clip","paste","copy","vibrate","buzz","notify","share","torch","flashlight",
+            "tts","say","speak","volume","vol","wifi","device","deviceinfo",
+            "app-update","app-upgrade"
         )
         return builtins.filter { it.startsWith(partial) }
     }

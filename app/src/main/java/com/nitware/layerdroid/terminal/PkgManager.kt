@@ -248,7 +248,7 @@ class PkgManager(private val context: Context) {
         TerminalLine("pkg — LayerDroid Script Manager", TerminalLine.Type.SUCCESS),
         TerminalLine("", TerminalLine.Type.OUTPUT),
         TerminalLine("Commands:", TerminalLine.Type.INFO),
-        TerminalLine("  pkg update            Download/update manifest from repository", TerminalLine.Type.OUTPUT),
+        TerminalLine("  pkg update|upgrade    Download/update manifest from repository", TerminalLine.Type.OUTPUT),
         TerminalLine("  pkg list              List installed scripts", TerminalLine.Type.OUTPUT),
         TerminalLine("  pkg available         List scripts available in repository", TerminalLine.Type.OUTPUT),
         TerminalLine("  pkg search <term>     Search packages by name/description", TerminalLine.Type.OUTPUT),

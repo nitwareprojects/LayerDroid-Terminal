@@ -126,7 +126,7 @@ class CommandProcessor(private val context: Context) {
             "lscpu" -> cmdLscpu()
             "lsblk" -> cmdLsblk()
             "mount" -> cmdMount()
-            "neofetch", "fetch" -> cmdNeofetch()
+            "neofetch" -> cmdNeofetch()
             "getprop" -> cmdGetprop(args)
             "pm" -> cmdPm(args)
             "am" -> shell.executeLines("am ${args.joinToString(" ")}", currentDir).let { Result(it) }
@@ -238,6 +238,7 @@ class CommandProcessor(private val context: Context) {
             "git" -> cmdRuntime("git", args = args)
             "ssh" -> cmdSsh(args)
             "termux-info", "termux" -> cmdTermuxInfo()
+            "app-update", "app-upgrade", "update-app" -> Result(cmdAppUpdate())
 
             else -> {
                 // Try to execute as an installed script via pkg
@@ -1593,12 +1594,55 @@ class CommandProcessor(private val context: Context) {
         return Result(lines)
     }
 
+    private suspend fun cmdAppUpdate(): List<TerminalLine> {
+        val lines = mutableListOf<TerminalLine>()
+        lines.add(TerminalLine("Checking for updates...", TerminalLine.Type.INFO))
+        return try {
+            val response = HttpClient.get(
+                "https://api.github.com/repos/nitwareprojects/LayerDroid-Terminal/releases/latest",
+                timeoutMs = 8000,
+                headers = mapOf("Accept" to "application/vnd.github+json")
+            )
+            val json = JSONObject(response)
+            val latestTag = json.optString("tag_name", "").trimStart('v')
+            val current = BuildConfig.VERSION_NAME
+            val releaseUrl = json.optString("html_url", "")
+            val assets = json.optJSONArray("assets")
+            var apkUrl: String? = null
+            if (assets != null) {
+                for (i in 0 until assets.length()) {
+                    val a = assets.getJSONObject(i)
+                    if (a.optString("name").endsWith(".apk")) { apkUrl = a.optString("browser_download_url"); break }
+                }
+            }
+            if (latestTag.isEmpty()) {
+                lines.add(TerminalLine("Could not read latest release.", TerminalLine.Type.WARNING))
+            } else if (latestTag == current) {
+                lines.add(TerminalLine("You're on the latest version: v$current  ✓", TerminalLine.Type.SUCCESS))
+            } else {
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  Update available!", TerminalLine.Type.SUCCESS))
+                lines.add(TerminalLine("  Current : v$current", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  Latest  : v$latestTag", TerminalLine.Type.SUCCESS))
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                if (apkUrl != null) lines.add(TerminalLine("  APK  : $apkUrl", TerminalLine.Type.INFO))
+                lines.add(TerminalLine("  Page : $releaseUrl", TerminalLine.Type.INFO))
+                lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+                lines.add(TerminalLine("  Download the APK and tap it to install.", TerminalLine.Type.SYSTEM))
+            }
+            lines
+        } catch (e: Exception) {
+            lines.add(TerminalLine("Update check failed: ${e.message}", TerminalLine.Type.ERROR))
+            lines
+        }
+    }
+
     private fun cmdHelp(args: List<String>): Result {
         if (args.isNotEmpty()) return cmdMan(args)
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  +--------------------------------------+", TerminalLine.Type.SUCCESS))
-        lines.add(TerminalLine("  |    LayerDroid Terminal  v1.0         |", TerminalLine.Type.SUCCESS))
+        lines.add(TerminalLine("  |    LayerDroid Terminal  v1.0.1       |", TerminalLine.Type.SUCCESS))
         lines.add(TerminalLine("  |    Advanced Android Terminal         |", TerminalLine.Type.SUCCESS))
         lines.add(TerminalLine("  +--------------------------------------+", TerminalLine.Type.SUCCESS))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
@@ -1635,8 +1679,9 @@ class CommandProcessor(private val context: Context) {
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("PACKAGES (pkg help for details)")
-        cmd("pkg update   pkg list   pkg available   pkg search <q>")
+        cmd("pkg update|upgrade   pkg list   pkg available   pkg search <q>")
         cmd("pkg install <name>   pkg remove <name>   pkg run <name>")
+        cmd("pkg info <name>   pkg repo   pkg setrepo <url>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("RUNTIMES (requires Termux)")
@@ -1645,7 +1690,7 @@ class CommandProcessor(private val context: Context) {
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
 
         sec("ANDROID DEVICE")
-        cmd("battery  device  wifi  volume  sensor")
+        cmd("battery  device  wifi  volume")
         cmd("clip  copy <txt>  vibrate [ms]  notify <title> <msg>")
         cmd("share <txt>  torch on|off  tts <text>  open <url>")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
@@ -1673,6 +1718,8 @@ class CommandProcessor(private val context: Context) {
         sec("FUN")
         cmd("neofetch  banner <txt>  cowsay <txt>  matrix")
         cmd("fortune  sl  rev")
+        lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+        cmd("app-update  — check for a newer version of LayerDroid")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  'man <cmd>' for details  •  TAB to complete", TerminalLine.Type.SYSTEM))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
