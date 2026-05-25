@@ -25,6 +25,19 @@ class CommandProcessor(private val context: Context) {
     companion object {
         private const val TERMUX_PREFIX = "/data/data/com.termux/files/usr"
         private const val TERMUX_BIN    = "$TERMUX_PREFIX/bin"
+        private const val PISTON_URL    = "https://emkc.org/api/v2/piston/execute"
+
+        // Maps command name → Piston (language, version)
+        private val PISTON_LANGS = mapOf(
+            "python3" to ("python"     to "3"),
+            "python"  to ("python"     to "3"),
+            "python2" to ("python"     to "2"),
+            "node"    to ("javascript" to "18"),
+            "nodejs"  to ("javascript" to "18"),
+            "php"     to ("php"        to "8"),
+            "ruby"    to ("ruby"       to "3"),
+            "lua"     to ("lua"        to "5")
+        )
     }
 
     // The ONLY reliable test: try to actually run a Termux binary.
@@ -980,7 +993,7 @@ class CommandProcessor(private val context: Context) {
             "Storage: $storageUsed / $storageTotal",
             "Battery: $battery",
             "Uptime:  $uptime",
-            "Shell:   LayerDroid Terminal v1.0",
+            "Shell:   LayerDroid Terminal v${BuildConfig.VERSION_NAME}",
             termuxStatus
         )
 
@@ -1530,23 +1543,84 @@ class CommandProcessor(private val context: Context) {
     // ─── Runtime (Python / Node / Git / etc.) ─────────────────────────────────
 
     private suspend fun cmdRuntime(vararg names: String, args: List<String>): Result {
+        // 1. Try local / Termux binaries
         val candidates = buildList {
             names.forEach { n -> add(n); add("$TERMUX_BIN/$n") }
         }
         for (bin in candidates) {
             val result = shell.executeLines("$bin ${args.joinToString(" ")} 2>&1", currentDir, 30000L, envVars)
-            if (result.isNotEmpty() && result.none { "not found" in it.text || "No such file" in it.text || "cannot find" in it.text }) {
-                return Result(result)
+            if (result.isNotEmpty() && result.none {
+                    "not found" in it.text || "No such file" in it.text || "cannot find" in it.text
+                }) return Result(result)
+        }
+
+        // 2. Cloud fallback via Piston API (all supported languages except git)
+        val name = names.first()
+        if (PISTON_LANGS.containsKey(name)) return cmdRuntimeCloud(name, args)
+
+        // 3. Nothing worked
+        return Result(listOf(
+            TerminalLine("$name: not found", TerminalLine.Type.ERROR),
+            TerminalLine("  Install Termux (f-droid.org) to get $name.", TerminalLine.Type.INFO)
+        ))
+    }
+
+    private suspend fun cmdRuntimeCloud(name: String, args: List<String>): Result {
+        val (language, version) = PISTON_LANGS[name]!!
+
+        // Parse: -c / -e / -r flag (inline code) or a file path
+        val code: String
+        val stdin: String
+        when {
+            args.isEmpty() -> return Result(listOf(
+                TerminalLine("Usage: $name <script>  or  $name -c \"<code>\"", TerminalLine.Type.WARNING)
+            ))
+            args[0] in listOf("-c", "-e", "-r") -> {
+                code  = args.drop(1).joinToString(" ")
+                stdin = ""
+            }
+            else -> {
+                val file = resolveFile(args[0])
+                if (!file.exists()) return Result(listOf(
+                    TerminalLine("$name: ${args[0]}: No such file", TerminalLine.Type.ERROR)
+                ))
+                code  = file.readText()
+                stdin = args.drop(1).joinToString("\n")
             }
         }
-        val name = names.first()
-        val lines = mutableListOf(TerminalLine("$name: not found", TerminalLine.Type.ERROR))
-        if (hasTermux) {
-            lines.add(TerminalLine("  Termux binaries are accessible — try: $TERMUX_BIN/$name", TerminalLine.Type.INFO))
-        } else {
-            lines.add(TerminalLine("  Install Termux (f-droid.org) to get $name and 1000+ packages.", TerminalLine.Type.INFO))
+        if (code.isBlank()) return Result(listOf(
+            TerminalLine("$name: empty input", TerminalLine.Type.WARNING)
+        ))
+
+        return try {
+            val body = JSONObject()
+                .put("language", language)
+                .put("version", version)
+                .put("files",   JSONArray().put(JSONObject().put("content", code)))
+                .put("stdin",   stdin)
+                .toString()
+
+            val response = HttpClient.post(PISTON_URL, body, timeoutMs = 20_000)
+            val run      = JSONObject(response).getJSONObject("run")
+            val stdout   = run.optString("stdout", "")
+            val stderr   = run.optString("stderr", "")
+            val exitCode = run.optInt("code", 0)
+
+            val lines = mutableListOf<TerminalLine>()
+            lines.add(TerminalLine("  ⬡ cloud · $language $version", TerminalLine.Type.SYSTEM))
+            stdout.trimEnd('\n').lines().filter { it.isNotEmpty() || stdout.contains('\n') }
+                .forEach { lines.add(TerminalLine(it, TerminalLine.Type.OUTPUT)) }
+            stderr.trimEnd('\n').lines().filter { it.isNotEmpty() }
+                .forEach { lines.add(TerminalLine(it, TerminalLine.Type.ERROR)) }
+            if (stdout.isEmpty() && stderr.isEmpty())
+                lines.add(TerminalLine("  (exit $exitCode — no output)", TerminalLine.Type.SYSTEM))
+            Result(lines)
+        } catch (e: Exception) {
+            Result(listOf(
+                TerminalLine("$name: cloud execution failed — ${e.message}", TerminalLine.Type.ERROR),
+                TerminalLine("  Check your internet connection and try again.", TerminalLine.Type.SYSTEM)
+            ))
         }
-        return Result(lines)
     }
 
     private suspend fun cmdSsh(args: List<String>): Result {
