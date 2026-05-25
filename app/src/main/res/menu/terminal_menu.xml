@@ -32,4 +32,9 @@
         android:title="Clear terminal"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/action_about"
+        android:title="About"
+        app:showAsAction="never" />
+
 </menu>

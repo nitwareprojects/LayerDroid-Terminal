@@ -61,6 +61,12 @@
             android:label="nano"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboardHidden|orientation|screenSize" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="About"
+            android:configChanges="keyboardHidden|orientation|screenSize" />
     </application>
 
 </manifest>

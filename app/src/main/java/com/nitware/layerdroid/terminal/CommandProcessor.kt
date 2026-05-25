@@ -239,6 +239,7 @@ class CommandProcessor(private val context: Context) {
             "ssh" -> cmdSsh(args)
             "termux-info", "termux" -> cmdTermuxInfo()
             "app-update", "app-upgrade", "update-app" -> Result(cmdAppUpdate())
+            "whatsnew", "changelog", "changes", "news" -> Result(cmdWhatsNew())
 
             else -> {
                 // Try to execute as an installed script via pkg
@@ -1339,7 +1340,9 @@ class CommandProcessor(private val context: Context) {
             "nano" to "nano <file>\n  Open text editor.\n  ^O save, ^X exit, ^W search, ^_ go to line.",
             "vi"   to "vi <file>\n  Alias for nano.",
             "edit" to "edit <file>\n  Alias for nano.",
-            "view" to "view <file>\n  Open file in read-only mode."
+            "view" to "view <file>\n  Open file in read-only mode.",
+            "whatsnew" to "whatsnew\n  Show the changelog for all LayerDroid versions.\n  Aliases: changelog, changes, news",
+            "app-update" to "app-update\n  Check GitHub Releases for a newer version of the app.\n  Shows current and latest version, plus APK download link.\n  Aliases: app-upgrade, update-app"
         )
         val page = manPages[cmd] ?: return Result(listOf(TerminalLine("No manual entry for $cmd", TerminalLine.Type.ERROR)))
         val lines = mutableListOf(
@@ -1594,6 +1597,57 @@ class CommandProcessor(private val context: Context) {
         return Result(lines)
     }
 
+    private fun isNewerVersion(latest: String, current: String): Boolean {
+        val l = latest.split(".").map { it.toIntOrNull() ?: 0 }
+        val c = current.split(".").map { it.toIntOrNull() ?: 0 }
+        val n = maxOf(l.size, c.size)
+        for (i in 0 until n) {
+            val lv = l.getOrElse(i) { 0 }
+            val cv = c.getOrElse(i) { 0 }
+            if (lv > cv) return true
+            if (lv < cv) return false
+        }
+        return false
+    }
+
+    private fun cmdWhatsNew(): List<TerminalLine> {
+        val lines = mutableListOf<TerminalLine>()
+        fun hdr(t: String) = lines.add(TerminalLine(t, TerminalLine.Type.SUCCESS))
+        fun out(t: String) = lines.add(TerminalLine(t, TerminalLine.Type.OUTPUT))
+        fun inf(t: String) = lines.add(TerminalLine(t, TerminalLine.Type.INFO))
+        fun sys(t: String) = lines.add(TerminalLine(t, TerminalLine.Type.SYSTEM))
+        fun gap() = lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
+
+        hdr("What's New in LayerDroid Terminal")
+        hdr("══════════════════════════════════")
+        gap()
+        hdr("v1.0.2  (current)")
+        out("  • Fixed: app-update used string equality — would falsely prompt")
+        out("    to 'downgrade' when GitHub latest was an older tag")
+        out("  • New: whatsnew / changelog command (this screen)")
+        out("  • New: About Us screen — tap ⋮ menu → About")
+        out("  • Design: left accent bars per output type in terminal")
+        out("  • Design: toolbar shows current directory as subtitle")
+        out("  • Design: input area uses distinct background tint")
+        out("  • Tab completion expanded with 20+ missing aliases")
+        gap()
+        inf("v1.0.1")
+        out("  • app-update command — checks GitHub Releases for newer APK")
+        out("  • Background update check on every launch (silent banner)")
+        out("  • pkg upgrade alias added (same as pkg update)")
+        out("  • Removed 'sensor' from help (was never implemented)")
+        out("  • Gradle wrapper committed; buildConfig feature enabled")
+        gap()
+        sys("v1.0.0  — initial release")
+        out("  • Full terminal emulator with 90+ built-in commands")
+        out("  • HTTP, weather, QR, crypto, TTS, torch, vibrate, neofetch")
+        out("  • pkg script manager with community repository")
+        out("  • nano / vi text editor")
+        out("  • Termux bridge support")
+        gap()
+        return lines
+    }
+
     private suspend fun cmdAppUpdate(): List<TerminalLine> {
         val lines = mutableListOf<TerminalLine>()
         lines.add(TerminalLine("Checking for updates...", TerminalLine.Type.INFO))
@@ -1617,7 +1671,7 @@ class CommandProcessor(private val context: Context) {
             }
             if (latestTag.isEmpty()) {
                 lines.add(TerminalLine("Could not read latest release.", TerminalLine.Type.WARNING))
-            } else if (latestTag == current) {
+            } else if (!isNewerVersion(latestTag, current)) {
                 lines.add(TerminalLine("You're on the latest version: v$current  ✓", TerminalLine.Type.SUCCESS))
             } else {
                 lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
@@ -1719,7 +1773,7 @@ class CommandProcessor(private val context: Context) {
         cmd("neofetch  banner <txt>  cowsay <txt>  matrix")
         cmd("fortune  sl  rev")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
-        cmd("app-update  — check for a newer version of LayerDroid")
+        cmd("app-update  whatsnew  — updates & changelog")
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))
         lines.add(TerminalLine("  'man <cmd>' for details  •  TAB to complete", TerminalLine.Type.SYSTEM))
         lines.add(TerminalLine("", TerminalLine.Type.OUTPUT))

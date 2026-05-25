@@ -43,6 +43,19 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         checkForAppUpdate()
     }
 
+    private fun isNewerVersion(latest: String, current: String): Boolean {
+        val l = latest.split(".").map { it.toIntOrNull() ?: 0 }
+        val c = current.split(".").map { it.toIntOrNull() ?: 0 }
+        val n = maxOf(l.size, c.size)
+        for (i in 0 until n) {
+            val lv = l.getOrElse(i) { 0 }
+            val cv = c.getOrElse(i) { 0 }
+            if (lv > cv) return true
+            if (lv < cv) return false
+        }
+        return false
+    }
+
     private fun checkForAppUpdate() {
         viewModelScope.launch {
             try {
@@ -54,7 +67,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
                 val latestTag = JSONObject(response).optString("tag_name", "").trimStart('v')
-                if (latestTag.isNotEmpty() && latestTag != BuildConfig.VERSION_NAME) {
+                if (latestTag.isNotEmpty() && isNewerVersion(latestTag, BuildConfig.VERSION_NAME)) {
                     appendLines(listOf(
                         TerminalLine("  Update available: v${BuildConfig.VERSION_NAME} → v$latestTag  •  run 'app-update'", TerminalLine.Type.WARNING)
                     ))
@@ -68,7 +81,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             TerminalLine("", TerminalLine.Type.OUTPUT),
             TerminalLine("  +----------------------------------+", TerminalLine.Type.SUCCESS),
             TerminalLine("  |                                  |", TerminalLine.Type.SUCCESS),
-            TerminalLine("  |   >_ LayerDroid Terminal v1.0.1  |", TerminalLine.Type.SUCCESS),
+            TerminalLine("  |   >_ LayerDroid Terminal v1.0.2  |", TerminalLine.Type.SUCCESS),
             TerminalLine("  |      Advanced Android Terminal   |", TerminalLine.Type.SUCCESS),
             TerminalLine("  |                                  |", TerminalLine.Type.SUCCESS),
             TerminalLine("  +----------------------------------+", TerminalLine.Type.SUCCESS),
@@ -80,6 +93,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             TerminalLine("  * 'calc sqrt(16)'  - calculator", TerminalLine.Type.INFO),
             TerminalLine("  * 'termux-info'    - Termux integration", TerminalLine.Type.INFO),
             TerminalLine("  * 'app-update'     - check for app updates", TerminalLine.Type.INFO),
+            TerminalLine("  * 'whatsnew'       - see what changed in this version", TerminalLine.Type.INFO),
             TerminalLine("", TerminalLine.Type.OUTPUT),
             TerminalLine("  Pipes: ls | grep foo    Redirects: cmd > file", TerminalLine.Type.SYSTEM),
             TerminalLine("", TerminalLine.Type.OUTPUT)
@@ -185,7 +199,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             "python","python3","node","nodejs","php","ruby","lua","git","ssh","termux-info",
             "battery","bat","clip","paste","copy","vibrate","buzz","notify","share","torch","flashlight",
             "tts","say","speak","volume","vol","wifi","device","deviceinfo",
-            "app-update","app-upgrade"
+            "app-update","app-upgrade",
+            "whatsnew","changelog","changes","news"
         )
         return builtins.filter { it.startsWith(partial) }
     }

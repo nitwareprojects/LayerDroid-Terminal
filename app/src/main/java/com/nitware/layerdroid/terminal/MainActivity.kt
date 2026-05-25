@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("layerdroid", MODE_PRIVATE)
         if (prefs.getBoolean("terms_accepted", false)) return
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Terms of Use — LayerDroid v1.0")
+            .setTitle("Terms of Use — LayerDroid v${BuildConfig.VERSION_NAME}")
             .setMessage(
                 "Please read before continuing.\n\n" +
                 "1. Shell Command Execution\n" +
@@ -111,7 +111,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupToolbar() {
         binding.toolbar.apply {
             title = "LayerDroid Terminal"
+            subtitle = "~"
             setTitleTextColor(Color.parseColor("#56D364"))
+            setSubtitleTextColor(Color.parseColor("#8B949E"))
             setBackgroundColor(Color.parseColor("#161B22"))
             inflateMenu(R.menu.terminal_menu)
             setOnMenuItemClickListener { item ->
@@ -122,6 +124,7 @@ class MainActivity : AppCompatActivity() {
                     R.id.action_paste -> { pasteClipboard(); true }
                     R.id.action_neofetch -> { viewModel.executeCommand("neofetch"); true }
                     R.id.action_help -> { viewModel.executeCommand("help"); true }
+                    R.id.action_about -> { startActivity(android.content.Intent(this@MainActivity, AboutActivity::class.java)); true }
                     else -> false
                 }
             }
@@ -329,6 +332,9 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.currentDir.observe(this) { dir ->
             binding.tvPrompt.text = viewModel.getPrompt()
+            binding.toolbar.subtitle = dir.replace(
+                android.os.Environment.getExternalStorageDirectory().absolutePath, "~"
+            ).let { if (it.length > 40) "…" + it.takeLast(38) else it }
         }
 
         viewModel.isRunning.observe(this) { running ->

@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/terminal_bg"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/terminal_bar"
+        app:elevation="4dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/terminal_bar"
+            app:titleTextColor="@color/terminal_green"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"
+            app:title="About" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="40dp">
+
+            <!-- Hero block -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingTop="32dp"
+                android:paddingBottom="28dp"
+                android:background="@color/terminal_bar">
+
+                <ImageView
+                    android:id="@+id/ivAppIcon"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@mipmap/ic_launcher"
+                    android:contentDescription="App icon" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LayerDroid Terminal"
+                    android:textColor="@color/terminal_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:layout_marginTop="14dp" />
+
+                <TextView
+                    android:id="@+id/tvVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="v1.0.2"
+                    android:textColor="@color/terminal_bg"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:layout_marginTop="8dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:background="#56D364" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/terminal_divider" />
+
+            <!-- About section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ABOUT"
+                    android:textColor="@color/terminal_green"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LayerDroid Terminal is a full-featured Android terminal emulator with 90+ built-in commands, a script package manager, a text editor, and real network capabilities — no root required."
+                    android:textColor="@color/terminal_output"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.5"
+                    android:layout_marginTop="10dp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/terminal_divider"
+                android:layout_marginTop="16dp" />
+
+            <!-- What's New section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WHAT'S NEW IN v1.0.2"
+                    android:textColor="@color/terminal_green"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="• Fixed version comparison in app-update (no more false downgrade alerts)\n• whatsnew / changelog command\n• About Us screen (you're here!)\n• Left accent bars per output type in terminal\n• Toolbar shows current directory\n• Tab completion expanded with 20+ aliases\n\nRun 'whatsnew' in the terminal for the full changelog."
+                    android:textColor="@color/terminal_output"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.6"
+                    android:fontFamily="monospace"
+                    android:layout_marginTop="10dp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/terminal_divider"
+                android:layout_marginTop="16dp" />
+
+            <!-- Links section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LINKS"
+                    android:textColor="@color/terminal_green"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvGithub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⬡  GitHub — Source Code"
+                    android:textColor="@color/terminal_blue"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:background="?attr/selectableItemBackground" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/terminal_divider" />
+
+                <TextView
+                    android:id="@+id/tvReportBug"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⬡  Report a Bug / Request a Feature"
+                    android:textColor="@color/terminal_blue"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:background="?attr/selectableItemBackground" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/terminal_divider" />
+
+                <TextView
+                    android:id="@+id/tvReleases"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⬡  Latest Releases &amp; APK Downloads"
+                    android:textColor="@color/terminal_blue"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackground" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/terminal_divider"
+                android:layout_marginTop="16dp" />
+
+            <!-- Credits -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CREDITS"
+                    android:textColor="@color/terminal_green"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Developed by NitWare Projects\ngithub.com/nitwareprojects"
+                    android:textColor="@color/terminal_output"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace"
+                    android:lineSpacingMultiplier="1.5"
+                    android:layout_marginTop="10dp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/terminal_divider"
+                android:layout_marginTop="16dp" />
+
+            <!-- Legal -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LEGAL"
+                    android:textColor="@color/terminal_green"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Open source — MIT License"
+                    android:textColor="@color/terminal_system"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace"
+                    android:layout_marginTop="10dp" />
+
+                <TextView
+                    android:id="@+id/tvTerms"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="View Terms of Use"
+                    android:textColor="@color/terminal_blue"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackground" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

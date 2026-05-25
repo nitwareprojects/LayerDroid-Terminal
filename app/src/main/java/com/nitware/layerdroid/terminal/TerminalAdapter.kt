@@ -27,6 +27,14 @@ class TerminalAdapter : ListAdapter<TerminalLine, TerminalAdapter.ViewHolder>(DI
         private val COLOR_PROMPT    = Color.parseColor("#56D364")
         private val COLOR_COMMAND   = Color.parseColor("#E6EDF3")
         private val COLOR_SEPARATOR = Color.parseColor("#21262D")
+
+        // Accent bar colors (left stripe per line type)
+        private val ACCENT_SUCCESS   = Color.parseColor("#56D364")
+        private val ACCENT_ERROR     = Color.parseColor("#FF7B72")
+        private val ACCENT_WARNING   = Color.parseColor("#E3B341")
+        private val ACCENT_INFO      = Color.parseColor("#58A6FF")
+        private val ACCENT_SYSTEM    = Color.parseColor("#30363D")
+        private val ACCENT_NONE      = Color.TRANSPARENT
     }
 
     inner class ViewHolder(val binding: ItemTerminalLineBinding) :
@@ -41,6 +49,7 @@ class TerminalAdapter : ListAdapter<TerminalLine, TerminalAdapter.ViewHolder>(DI
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val line = getItem(position)
+
         holder.binding.tvLine.apply {
             text = line.text
             typeface = Typeface.MONOSPACE
@@ -74,5 +83,16 @@ class TerminalAdapter : ListAdapter<TerminalLine, TerminalAdapter.ViewHolder>(DI
                 Typeface.MONOSPACE
             }
         }
+
+        holder.binding.accentBar.setBackgroundColor(
+            when (line.type) {
+                TerminalLine.Type.SUCCESS   -> ACCENT_SUCCESS
+                TerminalLine.Type.ERROR     -> ACCENT_ERROR
+                TerminalLine.Type.WARNING   -> ACCENT_WARNING
+                TerminalLine.Type.INFO      -> ACCENT_INFO
+                TerminalLine.Type.SYSTEM    -> ACCENT_SYSTEM
+                else                        -> ACCENT_NONE
+            }
+        )
     }
 }

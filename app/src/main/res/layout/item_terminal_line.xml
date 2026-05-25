@@ -1,15 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/tvLine"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fontFamily="monospace"
-    android:textSize="13sp"
-    android:textIsSelectable="true"
-    android:paddingStart="4dp"
-    android:paddingEnd="4dp"
-    android:paddingTop="1dp"
-    android:paddingBottom="1dp"
-    android:lineSpacingMultiplier="1.15"
-    android:background="@android:color/transparent" />
+    android:orientation="horizontal">
+
+    <View
+        android:id="@+id/accentBar"
+        android:layout_width="3dp"
+        android:layout_height="match_parent"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="2dp"
+        android:background="@android:color/transparent" />
+
+    <TextView
+        android:id="@+id/tvLine"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:textSize="13sp"
+        android:textIsSelectable="true"
+        android:paddingStart="8dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
+        android:lineSpacingMultiplier="1.15"
+        android:background="@android:color/transparent" />
+
+</LinearLayout>
